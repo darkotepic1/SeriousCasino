@@ -92,7 +92,7 @@ export async function leaderboard(root, ctx) {
     <div class="page-head"><h1>🏆 Rangliste</h1></div>
     <div class="panel"><div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>#</th><th>Name</th><th class="num">Chips</th><th class="num">Gewinn/Verlust</th><th class="num">Runden</th><th class="num">Größter Gewinn</th></tr></thead>
-      <tbody>${list.map((p, i) => `<tr class="${p.id === session.id ? 'hl' : ''}">
+      <tbody>${list.map((p, i) => `<tr class="${p.name === ctx.state.me?.name ? 'hl' : ''}">
         <td>${i < 3 ? `<span class="medal">${medal[i]}</span>` : i + 1}</td>
         <td><b>${esc(p.name)}</b></td><td class="num gold"><b>${fmt(p.balance)}</b></td>
         <td class="num ${signCls(p.net)}">${fmtSigned(p.net)}</td><td class="num">${fmt(p.rounds)}</td><td class="num">${fmtSigned(p.biggestWin)}</td></tr>`).join('')}
@@ -107,9 +107,11 @@ export async function leaderboard(root, ctx) {
 async function fillInvite(box, ctx) {
   let info = { lan: false, urls: [] };
   try { info = await ctx.get('/api/server-info'); } catch { /* egal */ }
-  if (info.lan && info.urls.length) {
-    box.innerHTML = `<h2>📶 Freunde einladen</h2>
-      <p class="muted">Heimnetz-Modus ist an. Freunde im <b>selben WLAN</b> öffnen auf Handy oder Laptop diese Adresse:</p>
+  if ((info.lan || info.online) && info.urls.length) {
+    box.innerHTML = `<h2>${info.online ? '🌍' : '📶'} Freunde einladen</h2>
+      <p class="muted">${info.online
+        ? 'Online-Modus ist an. Schick deinen Freunden diesen Link – sie können von überall mitspielen:'
+        : 'Heimnetz-Modus ist an. Freunde im <b>selben WLAN</b> öffnen auf Handy oder Laptop diese Adresse:'}</p>
       ${info.urls.map((u) => `<div class="invite-url"><code>${esc(u)}</code><button class="btn btn-sm" data-copy="${esc(u)}">Kopieren</button></div>`).join('')}
       <p class="muted" style="margin-bottom:0">Dort legt jeder sein eigenes Profil an. Guthaben und Rangliste sind für alle gemeinsam.</p>`;
     box.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
@@ -142,7 +144,20 @@ export function settings(root, ctx) {
           <input class="input" name="name" maxlength="20" value="${esc(me.name)}" required>
           <button class="btn" type="submit">Umbenennen</button>
         </form>
-        <div class="row" style="margin-top:12px"><button class="btn btn-gold" id="switchBtn">Profil wechseln / neu anlegen</button></div>
+        <div class="row" style="margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-gold" id="switchBtn">Profil wechseln / neu anlegen</button>
+          <button class="btn" id="logoutBtn">Abmelden</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>🔒 Passwort</h2>
+        <p class="muted">${me.hasPassword ? 'Dein Profil ist mit einem Passwort geschützt.' : ctx.server.online
+          ? 'Lege ein Passwort fest.' : 'Optional: Schütze dein Profil mit einem Passwort (Pflicht, wenn ihr online spielt).'}</p>
+        <form id="pwForm" class="auth-form">
+          ${me.hasPassword ? '<input class="input" name="old" type="password" placeholder="Bisheriges Passwort" autocomplete="current-password" required>' : ''}
+          <input class="input" name="password" type="password" placeholder="Neues Passwort (mind. 4 Zeichen)" autocomplete="new-password" minlength="4" required>
+          <button class="btn" type="submit">${me.hasPassword ? 'Passwort ändern' : 'Passwort festlegen'}</button>
+        </form>
       </div>
       <div class="panel invite-box"></div>
       <div class="panel danger-zone">
@@ -175,6 +190,16 @@ export function settings(root, ctx) {
     } catch (err) { toast(err.message, 'err'); }
   });
   el.querySelector('#switchBtn').addEventListener('click', () => ctx.openProfilePicker());
+  el.querySelector('#logoutBtn').addEventListener('click', () => ctx.logout());
+  el.querySelector('#pwForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await ctx.post('/api/me/password', { old: e.target.old?.value, password: e.target.password.value });
+      await ctx.loadMe();
+      toast('Passwort gespeichert.', 'ok');
+      location.hash = '#/settings?' + Date.now(); // Seite neu aufbauen
+    } catch (err) { toast(err.message, 'err'); }
+  });
   el.querySelector('#resetBtn').addEventListener('click', async () => {
     if (!(await confirmDialog('Profil zurücksetzen?', `${me.name} bekommt wieder 10.000 Chips. Statistik und Verlauf werden gelöscht.`, 'Zurücksetzen', true))) return;
     try {

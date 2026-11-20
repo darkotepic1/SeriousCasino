@@ -60,7 +60,7 @@ export function setBalance(n) {
 
 // ---------- Profil ----------
 async function loadMe() {
-  if (!session.id) return null;
+  if (!session.token) return null;
   try {
     state.me = await get('/api/me');
     document.getElementById('profileName').textContent = state.me.name;
@@ -77,41 +77,84 @@ export async function refreshMe() {
   await loadMe();
 }
 
+export const server = { online: false, lan: false, requirePassword: false };
+
+/** Anmelden bzw. Profil wechseln */
 export async function openProfilePicker(force = false) {
   const list = await get('/api/profiles').catch(() => []);
+  const needPw = server.requirePassword;
   const el = h(`<div>
-    <h2>${force ? 'Willkommen im Spaß-Casino! 🎰' : 'Profil wählen'}</h2>
-    <p class="muted" style="margin:0">Nur Spielgeld – alles bleibt auf deinem PC. Jedes Profil startet mit 10.000 Chips.</p>
+    <h2>${force ? 'Willkommen im Spaß-Casino! 🎰' : 'Profil wechseln'}</h2>
+    <p class="muted" style="margin:0">${server.online
+      ? 'Online-Casino mit Spielgeld. Melde dich mit Name und Passwort an oder leg ein neues Profil an.'
+      : 'Nur Spielgeld. Jedes Profil startet mit 10.000 Chips.'}</p>
     <div class="profile-list">${list.length ? list.map((p) => `
-      <button class="profile-item ${p.id === session.id ? 'current' : ''}" data-id="${esc(p.id)}">
+      <button class="profile-item ${state.me && p.name === state.me.name ? 'current' : ''}" data-name="${esc(p.name)}" data-pw="${p.hasPassword ? 1 : 0}">
         <span class="avatar">${esc(p.name.slice(0, 1).toUpperCase())}</span>
-        <span class="pname">${esc(p.name)}</span><span class="pbal">${fmt(p.balance)}</span>
+        <span class="pname">${esc(p.name)}${p.hasPassword ? ' <span title="mit Passwort">🔒</span>' : ''}</span><span class="pbal">${fmt(p.balance)}</span>
       </button>`).join('') : '<p class="muted">Noch keine Profile – leg eins an:</p>'}</div>
-    <form class="row" id="newProfile">
-      <input class="input" name="name" maxlength="20" placeholder="Neuer Name" autocomplete="off" required>
-      <button class="btn btn-gold" type="submit">Anlegen</button>
+    <form class="auth-form hidden" id="loginForm">
+      <h3>Anmelden als <span class="gold login-name"></span></h3>
+      <input type="hidden" name="name">
+      <div class="row"><input class="input" name="password" type="password" placeholder="Passwort" autocomplete="current-password" required>
+      <button class="btn btn-gold" type="submit">Anmelden</button></div>
+    </form>
+    <form class="auth-form" id="newProfile">
+      <h3>Neues Profil</h3>
+      <input class="input" name="name" maxlength="20" placeholder="Name" autocomplete="username" required>
+      <input class="input" name="password" type="password" maxlength="100" autocomplete="new-password"
+        placeholder="${needPw ? 'Passwort (mind. 4 Zeichen)' : 'Passwort (optional)'}" ${needPw ? 'required minlength="4"' : ''}>
+      <button class="btn btn-gold" type="submit">Profil anlegen</button>
     </form></div>`);
   const close = modal(el, { closable: !force || !!state.me });
-  el.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', async () => {
-    sfx.click();
-    session.set(b.dataset.id);
+  const loginForm = el.querySelector('#loginForm');
+
+  async function finishLogin(r, greeting) {
+    if (state.me && session.token) post('/api/me/logout').catch(() => {});
+    session.set(r.token);
     close();
     await loadMe();
+    sfx.coin();
+    if (greeting) toast(greeting, 'ok');
     rerender();
+  }
+
+  el.querySelectorAll('[data-name]').forEach((b) => b.addEventListener('click', async () => {
+    sfx.click();
+    const name = b.dataset.name;
+    if (b.dataset.pw === '1' || needPw) {
+      loginForm.classList.remove('hidden');
+      loginForm.name.value = name;
+      loginForm.querySelector('.login-name').textContent = name;
+      loginForm.password.value = '';
+      loginForm.password.focus();
+      return;
+    }
+    try { await finishLogin(await post('/api/login', { name })); } catch (err) { toast(err.message, 'err'); }
   }));
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await finishLogin(await post('/api/login', { name: loginForm.name.value, password: loginForm.password.value }));
+    } catch (err) { toast(err.message, 'err'); loginForm.password.select(); }
+  });
   el.querySelector('#newProfile').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      const p = await post('/api/profiles', { name: e.target.name.value });
-      session.set(p.id);
-      close();
-      await loadMe();
-      sfx.coin();
-      toast(`Hallo ${p.name}! Du startest mit ${fmt(p.balance)} Chips.`, 'ok');
-      rerender();
+      const r = await post('/api/profiles', { name: e.target.name.value, password: e.target.password.value });
+      await finishLogin(r, `Hallo ${r.name}! Du startest mit ${fmt(r.balance)} Chips.`);
     } catch (err) { toast(err.message, 'err'); }
   });
-  setTimeout(() => el.querySelector('input')?.focus(), 50);
+  setTimeout(() => el.querySelector('#newProfile input')?.focus(), 50);
+}
+
+/** Abmelden (dieses Gerät) */
+export async function logout() {
+  try { await post('/api/me/logout'); } catch { /* egal */ }
+  session.set('');
+  state.me = null;
+  location.hash = '#/';
+  openProfilePicker(true);
 }
 
 // ---------- Banner: Tagesbonus & Nachfüllen ----------
@@ -179,7 +222,7 @@ async function render() {
       if (state.route !== route) return; // inzwischen weiternavigiert
       state.cleanup = (await mod.default(root.querySelector('.game-root'), gameCtx)) || null;
     } else if (pages[route]) {
-      state.cleanup = (await pages[route](appEl, { ...gameCtx, GAMES, state, openProfilePicker, loadMe })) || null;
+      state.cleanup = (await pages[route](appEl, { ...gameCtx, GAMES, state, server, openProfilePicker, loadMe, logout })) || null;
     } else {
       location.hash = '#/';
     }
@@ -200,6 +243,9 @@ paintSound();
 window.addEventListener('hashchange', render);
 
 (async () => {
+  try {
+    Object.assign(server, await get('/api/server-info'));
+  } catch { /* Server evtl. noch nicht da */ }
   try {
     await loadMe();
   } catch (e) {

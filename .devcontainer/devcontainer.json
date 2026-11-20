@@ -1,0 +1,14 @@
+{
+  "name": "Spass-Casino",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "hostRequirements": { "cpus": 2 },
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "Casino", "onAutoForward": "notify" }
+  },
+  "postCreateCommand": "npm ci --omit=dev",
+  "postStartCommand": "bash .devcontainer/start-casino.sh",
+  "customizations": {
+    "codespaces": { "openFiles": ["ONLINE-SPIELEN.md"] }
+  }
+}

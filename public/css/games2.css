@@ -1,4 +1,8 @@
 /* Styles für die 8 zusätzlichen Spiele */
+.auth-form { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.auth-form h3 { margin: 0; font-size: 1rem; }
+.auth-form .row .input { flex: 1; }
+.modal-card .auth-form + .auth-form { padding-top: 14px; border-top: 1px solid var(--line); }
 .invite-url { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
 .invite-url code { font-size: 1.15rem; font-weight: 800; color: var(--gold2); background: #08140e; border: 1px solid var(--gold-dark); padding: 8px 12px; border-radius: 10px; user-select: all; }
 .tile .tile-tag.is-new { background: linear-gradient(90deg, var(--gold2), var(--gold)); color: #2a1d00; border-color: var(--gold); }

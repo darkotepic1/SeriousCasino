@@ -1,6 +1,7 @@
 // Spaß-Casino – Server.
 // Standard: lauscht ausschließlich auf 127.0.0.1:3000 (nur dieser PC).
 // Mit --lan (start-heimnetz.bat): zusätzlich im Heimnetz erreichbar – aber nur für Geräte aus dem lokalen Netz.
+// Mit --online (GitHub Codespaces): über den Codespaces-Link aus dem Internet erreichbar, Passwörter sind Pflicht.
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -9,8 +10,10 @@ const db = require('./db');
 const profiles = require('./profiles');
 const { GameError } = require('./util');
 
+const ONLINE = process.argv.includes('--online');
 const LAN = process.argv.includes('--lan');
-const HOST = process.env.CASINO_BIND || (LAN ? '0.0.0.0' : '127.0.0.1'); // CASINO_BIND nur für Tests
+const HOST = process.env.CASINO_BIND || (LAN || ONLINE ? '0.0.0.0' : '127.0.0.1'); // CASINO_BIND nur für Tests
+const REQUIRE_PASSWORD = ONLINE; // im Internet: Passwort Pflicht (lokal/Heimnetz optional)
 const PORT = Number(process.env.CASINO_PORT) || 3000; // optional anderer Port, z. B. zum Testen
 const URL = `http://127.0.0.1:${PORT}`;
 
@@ -45,7 +48,16 @@ const HOSTNAME = os.hostname().toLowerCase();
  * auf den Server zugreifen: erlaubt sind nur IP-Adressen und der Name dieses PCs, keine fremden Domains.
  */
 function hostAllowed(hostHeader) {
-  const m = /^([^:]+):(\d+)$/.exec(String(hostHeader || '').toLowerCase());
+  const host = String(hostHeader || '').toLowerCase();
+  if (ONLINE) {
+    // GitHub Codespaces-Links (https://<name>-3000.app.github.dev) oder ein selbst gesetzter Name
+    const name = host.replace(/:\d+$/, '');
+    if (/^[a-z0-9-]+\.app\.github\.dev$/.test(name) || /^[a-z0-9-]+\.preview\.app\.github\.dev$/.test(name)) return true;
+    if (process.env.CASINO_PUBLIC_HOST && name === process.env.CASINO_PUBLIC_HOST.toLowerCase()) return true;
+    if (name === '127.0.0.1' || name === 'localhost') return true;
+    return false;
+  }
+  const m = /^([^:]+):(\d+)$/.exec(host);
   if (!m || Number(m[2]) !== PORT) return false;
   const name = m[1];
   if (name === '127.0.0.1' || name === 'localhost') return true;
@@ -56,6 +68,7 @@ function hostAllowed(hostHeader) {
 
 /** Nur Geräte aus dem eigenen Netz dürfen zugreifen (falls der Router doch etwas weiterleitet) */
 function clientAllowed(addr) {
+  if (ONLINE) return true; // Zugriff läuft über GitHubs Weiterleitung; geschützt durch Passwörter
   const ip = String(addr || '').replace(/^::ffff:/, '');
   if (ip === '::1') return true;
   return LAN ? isPrivateIPv4(ip) : ip === '127.0.0.1';
@@ -71,14 +84,35 @@ for (const file of fs.readdirSync(path.join(__dirname, 'games'))) {
 
 const app = express();
 app.disable('x-powered-by');
+if (ONLINE) app.set('trust proxy', true); // echte Besucher-IP hinter GitHubs Weiterleitung (für die Login-Sperre)
 
 // Zugriffsschutz: nur dieser PC (bzw. im Heimnetz-Modus: nur Geräte aus dem lokalen Netz)
 app.use((req, res, next) => {
   if (!clientAllowed(req.socket.remoteAddress) || !hostAllowed(req.headers.host)) {
-    return res.status(403).send(LAN ? 'Nur im Heimnetz erreichbar.' : 'Nur lokal erreichbar.');
+    return res.status(403).send(ONLINE ? 'Unbekannte Adresse.' : LAN ? 'Nur im Heimnetz erreichbar.' : 'Nur lokal erreichbar.');
   }
+  // Grundlegende Sicherheits-Header
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
   next();
 });
+
+// Sperre gegen Passwort-Raten: nach 8 Fehlversuchen 10 Minuten Pause (pro IP)
+const failed = new Map();
+function checkLoginLimit(ip) {
+  const f = failed.get(ip);
+  if (f && f.until > Date.now()) {
+    const min = Math.ceil((f.until - Date.now()) / 60000);
+    throw new GameError(`Zu viele Fehlversuche. Bitte in ${min} Min. nochmal versuchen.`, 429);
+  }
+}
+function noteLoginFail(ip) {
+  const f = failed.get(ip) || { count: 0, until: 0 };
+  f.count++;
+  if (f.count >= 8) { f.until = Date.now() + 10 * 60 * 1000; f.count = 0; }
+  failed.set(ip, f);
+}
 app.use(express.json({ limit: '50kb' }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -96,14 +130,50 @@ function handle(fn) {
   };
 }
 
-const me = (req) => profiles.get(req.get('x-profile-id'));
+const token = (req) => req.get('x-session');
+const me = (req) => profiles.get(token(req));
 
 // ---------- Server-Info (für "Freunde einladen") ----------
-app.get('/api/server-info', handle(() => ({ lan: LAN, urls: LAN ? lanUrls() : [], port: PORT })));
+app.get('/api/server-info', handle((req) => ({
+  lan: LAN,
+  online: ONLINE,
+  requirePassword: REQUIRE_PASSWORD,
+  urls: LAN ? lanUrls() : ONLINE ? [`https://${String(req.headers.host).replace(/:\d+$/, '')}`] : [],
+  port: PORT,
+})));
 
-// ---------- Profile ----------
+// ---------- Profile & Anmeldung ----------
 app.get('/api/profiles', handle(() => profiles.all().map(profiles.summary).sort((a, b) => b.balance - a.balance)));
-app.post('/api/profiles', handle((req) => profiles.publicView(profiles.create(req.body?.name))));
+app.post('/api/profiles', handle((req) => {
+  const { p, token: t } = profiles.create(req.body?.name, req.body?.password, REQUIRE_PASSWORD);
+  return { ...profiles.publicView(p), token: t };
+}));
+app.post('/api/login', handle((req) => {
+  checkLoginLimit(req.ip);
+  try {
+    const { p, token: t } = profiles.login(req.body?.name, req.body?.password, REQUIRE_PASSWORD);
+    failed.delete(req.ip);
+    return { ...profiles.publicView(p), token: t };
+  } catch (e) {
+    if (e instanceof GameError && e.status === 401) noteLoginFail(req.ip);
+    throw e;
+  }
+}));
+app.post('/api/me/logout', handle((req) => {
+  profiles.logout(me(req), token(req));
+  return { ok: true };
+}));
+app.post('/api/me/password', handle((req) => {
+  const p = me(req);
+  checkLoginLimit(req.ip);
+  try {
+    profiles.setPassword(p, req.body?.old, req.body?.password);
+  } catch (e) {
+    if (/bisherige Passwort/.test(e.message)) noteLoginFail(req.ip);
+    throw e;
+  }
+  return profiles.publicView(p);
+}));
 app.get('/api/me', handle((req) => profiles.publicView(me(req))));
 app.post('/api/me/rename', handle((req) => {
   const p = me(req);
@@ -116,7 +186,7 @@ app.post('/api/me/reset', handle((req) => {
   return profiles.publicView(p);
 }));
 app.post('/api/me/delete', handle((req) => {
-  profiles.remove(me(req).id);
+  profiles.remove(me(req));
   return { ok: true };
 }));
 app.post('/api/me/daily', handle((req) => {
@@ -158,6 +228,13 @@ const server = app.listen(PORT, HOST, () => {
   console.log('  ==========================================');
   console.log('   Spass-Casino laeuft!');
   console.log(`   Im Browser oeffnen: ${URL}`);
+  if (ONLINE) {
+    console.log('');
+    console.log('   ONLINE-MODUS (GitHub Codespaces): Passwoerter sind Pflicht.');
+    if (process.env.CODESPACE_NAME && process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
+      console.log(`   Link fuer Freunde: https://${process.env.CODESPACE_NAME}-${PORT}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`);
+    }
+  }
   if (LAN) {
     const urls = lanUrls();
     console.log('');

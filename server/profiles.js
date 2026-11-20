@@ -48,12 +48,72 @@ function all() {
   return Object.values(db.get().profiles);
 }
 
-function create(name) {
+// ---------- Passwörter & Anmeldung ----------
+const MIN_PASSWORD = 4;
+const MAX_SESSIONS = 10;
+
+function hashPassword(pw) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(pw), salt, 32).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function checkPassword(p, pw) {
+  if (!p.passwordHash) return false;
+  const [salt, hash] = p.passwordHash.split(':');
+  const test = crypto.scryptSync(String(pw ?? ''), salt, 32);
+  return crypto.timingSafeEqual(test, Buffer.from(hash, 'hex'));
+}
+
+function validPassword(pw) {
+  const s = String(pw ?? '');
+  if (s.length < MIN_PASSWORD) throw new GameError(`Das Passwort braucht mindestens ${MIN_PASSWORD} Zeichen.`);
+  if (s.length > 100) throw new GameError('Das Passwort ist zu lang.');
+  return s;
+}
+
+const tokenHash = (t) => crypto.createHash('sha256').update(String(t)).digest('hex');
+
+/** Neue Anmeldung: erzeugt ein zufälliges Token; gespeichert wird nur dessen Hash */
+function newSession(p) {
+  const token = crypto.randomBytes(32).toString('hex');
+  p.sessions = [{ h: tokenHash(token), at: Date.now() }, ...(p.sessions || [])].slice(0, MAX_SESSIONS);
+  return token;
+}
+
+function byName(name) {
+  const n = String(name ?? '').trim().toLowerCase();
+  return all().find((p) => p.name.toLowerCase() === n) || null;
+}
+
+/** Anmelden. requirePassword = true im Online-Modus (Passwort immer Pflicht). */
+function login(name, password, requirePassword) {
+  const p = byName(name);
+  if (!p) throw new GameError('Name oder Passwort falsch.', 401);
+  if (p.passwordHash) {
+    if (!checkPassword(p, password)) throw new GameError('Name oder Passwort falsch.', 401);
+  } else if (requirePassword) {
+    throw new GameError('Dieses Profil hat noch kein Passwort. Bitte am PC ein Passwort festlegen.', 401);
+  }
+  return { p, token: newSession(p) };
+}
+
+function logout(p, token) {
+  const h = tokenHash(token);
+  p.sessions = (p.sessions || []).filter((s) => s.h !== h);
+}
+
+function setPassword(p, oldPw, newPw) {
+  if (p.passwordHash && !checkPassword(p, oldPw)) throw new GameError('Das bisherige Passwort stimmt nicht.');
+  p.passwordHash = hashPassword(validPassword(newPw));
+}
+
+function create(name, password, requirePassword) {
   const clean = cleanName(name);
   if (all().length >= MAX_PROFILES) throw new GameError('Zu viele Profile.');
-  if (all().some((p) => p.name.toLowerCase() === clean.toLowerCase())) {
-    throw new GameError('Diesen Namen gibt es schon.');
-  }
+  if (byName(clean)) throw new GameError('Diesen Namen gibt es schon.');
+  const hasPw = password !== undefined && password !== null && password !== '';
+  if (requirePassword || hasPw) validPassword(password);
   const p = {
     id: crypto.randomUUID(),
     name: clean,
@@ -63,23 +123,27 @@ function create(name) {
     lastDaily: null,
     stats: emptyStats(),
     history: [],
-    active: {}, // laufende Runden (Blackjack, Poker, Crash, Mines)
+    active: {}, // laufende Runden (Blackjack, Poker, Crash, Mines …)
+    passwordHash: hasPw ? hashPassword(password) : null,
+    sessions: [],
   };
   db.get().profiles[p.id] = p;
+  const token = newSession(p);
   db.save();
-  return p;
+  return { p, token };
 }
 
-function get(id) {
-  const p = typeof id === 'string' ? db.get().profiles[id] : null;
-  if (!p) throw new GameError('Profil nicht gefunden. Bitte Profil wählen.', 401);
+/** Profil zum Anmelde-Token finden */
+function get(token) {
+  const h = typeof token === 'string' && token.length >= 32 ? tokenHash(token) : null;
+  const p = h ? all().find((x) => (x.sessions || []).some((s) => s.h === h)) : null;
+  if (!p) throw new GameError('Bitte anmelden.', 401);
   if (!p.active) p.active = {};
   return p;
 }
 
-function remove(id) {
-  get(id);
-  delete db.get().profiles[id];
+function remove(p) {
+  delete db.get().profiles[p.id];
   db.save();
 }
 
@@ -151,19 +215,20 @@ function record(p, game, bet, payout, detail = '') {
 
 function publicView(p) {
   return {
-    id: p.id,
     name: p.name,
     balance: p.balance,
     createdAt: p.createdAt,
+    hasPassword: !!p.passwordHash,
     refill: refillInfo(p),
     daily: { available: p.lastDaily !== todayLocal(), amount: DAILY_BONUS },
   };
 }
 
+// Öffentliche Kurzinfo für Liste/Rangliste – bewusst OHNE interne ID
 function summary(p) {
   return {
-    id: p.id,
     name: p.name,
+    hasPassword: !!p.passwordHash,
     balance: p.balance,
     rounds: p.stats.rounds,
     net: p.stats.paid - p.stats.wagered,
@@ -174,4 +239,5 @@ function summary(p) {
 module.exports = {
   START_BALANCE, GAME_NAMES,
   all, create, get, remove, rename, reset, refill, claimDaily, record, publicView, summary,
+  login, logout, setPassword,
 };

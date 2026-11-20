@@ -5,7 +5,8 @@
   "description": "Privates Spaß-Casino mit Spielgeld, läuft nur lokal auf 127.0.0.1",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "online": "node server/index.js --online"
   },
   "dependencies": {
     "express": "^4.21.2"
