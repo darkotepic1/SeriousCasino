@@ -1,0 +1,14 @@
+# Mitgelieferte Node-Version (zu groß für GitHub, wird lokal genutzt)
+node/
+
+# Abhängigkeiten – werden beim ersten Start automatisch installiert
+node_modules/
+
+# Spielstände (Profile, Guthaben) – privat, bleiben nur auf dem PC
+data/
+
+# Sonstiges
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

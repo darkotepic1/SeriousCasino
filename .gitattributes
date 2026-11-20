@@ -1,0 +1,2 @@
+# Windows-Startskripte unverändert (mit CRLF) speichern, damit sie auch im ZIP-Download funktionieren
+*.bat -text
