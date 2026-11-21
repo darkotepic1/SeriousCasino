@@ -1,5 +1,6 @@
-// Seiten: Startseite, Statistik, Rangliste, Einstellungen.
+// Seiten: Startseite, Statistik, Rangliste, Einstellungen, Admin.
 import { h, esc, fmt, fmtSigned, toast, confirmDialog } from './ui.js';
+export { admin } from './adminpage.js';
 import { sfx } from './sound.js';
 import { session } from './api.js';
 
@@ -160,6 +161,11 @@ export function settings(root, ctx) {
         </form>
       </div>
       <div class="panel invite-box"></div>
+      <div class="panel">
+        <h2>🛠️ Admin-Bereich</h2>
+        <p class="muted">Spielern Chips geben oder abziehen, Profile zurücksetzen, vergessene Passwörter neu vergeben. Geschützt mit eigenem Admin-Passwort.</p>
+        <a class="btn" href="#/admin">Admin-Bereich öffnen</a>
+      </div>
       <div class="panel danger-zone">
         <h2>Zurücksetzen</h2>
         <p class="muted">Setzt <b>${esc(me.name)}</b> auf 10.000 Chips zurück und löscht Statistik und Verlauf dieses Profils.</p>

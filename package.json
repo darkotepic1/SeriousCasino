@@ -6,7 +6,8 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "online": "node server/index.js --online"
+    "online": "node server/index.js --online",
+    "admin": "node server/admin-password.js"
   },
   "dependencies": {
     "express": "^4.21.2"

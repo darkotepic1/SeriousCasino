@@ -45,6 +45,14 @@ Jeder, der es so herunterlädt, hat sein **eigenes** Casino mit eigenen Profilen
 
 Jedes Profil (nur ein Name, kein Passwort) hat sein eigenes Guthaben. Profil wechseln: oben rechts auf den Namen/Buchstaben klicken.
 
+## 🛠️ Admin-Bereich (Chips verteilen)
+
+Unter **Einstellungen → Admin-Bereich öffnen** kannst du jedem Spieler Chips **geben (+)**, **abziehen (−)** oder das Guthaben **genau setzen (=)**. Außerdem: Profil zurücksetzen, vergessenes Passwort neu vergeben, Spieler löschen. Änderungen erscheinen im Verlauf des Spielers als „Admin“.
+
+Der Bereich ist mit einem eigenen **Admin-Passwort** geschützt (mind. 6 Zeichen):
+- **Am PC:** Beim ersten Öffnen des Admin-Bereichs direkt am PC legst du es fest – oder per Doppelklick auf **`admin-passwort.bat`** (auch zum Ändern).
+- **Im Codespace (online):** unten im Terminal `npm run admin` eingeben. Über die Webseite geht das online absichtlich nicht.
+
 ## Guthaben zurücksetzen
 
 **Ein Profil zurücksetzen:** Einstellungen → **„Profil zurücksetzen“** → bestätigen.

@@ -14,6 +14,16 @@ Deine Freunde brauchen **kein** GitHub-Konto, nur den Link.
    - Mit dem 🌐-Symbol (bzw. Rechtsklick → **Copy Local Address**) den Link kopieren. Er sieht aus wie `https://…-3000.app.github.dev`.
 5. Den Link an deine Freunde schicken. Jeder legt ein Profil **mit Passwort** an – fertig!
 
+## Admin-Bereich (Chips verteilen)
+
+Einmalig im Codespace unten im **Terminal** eingeben und ein Admin-Passwort festlegen:
+
+```
+npm run admin
+```
+
+Danach im Casino: **Einstellungen → Admin-Bereich öffnen** → mit dem Admin-Passwort anmelden. Dort kannst du Spielern Chips geben, abziehen oder genau setzen, Profile zurücksetzen und vergessene Passwörter neu vergeben.
+
 ## Beenden
 
 - Auf **https://github.com/codespaces** beim Codespace auf **„…“ → „Stop codespace“** klicken.

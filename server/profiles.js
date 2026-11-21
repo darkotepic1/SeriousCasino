@@ -28,6 +28,7 @@ const GAME_NAMES = {
   scratch: 'Rubbellos',
   coinflip: 'Münzwurf',
   limbo: 'Limbo',
+  admin: 'Admin',
 };
 
 function emptyStats() {

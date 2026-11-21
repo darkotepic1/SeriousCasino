@@ -8,6 +8,7 @@ const os = require('os');
 const express = require('express');
 const db = require('./db');
 const profiles = require('./profiles');
+const admin = require('./admin');
 const { GameError } = require('./util');
 
 const ONLINE = process.argv.includes('--online');
@@ -203,6 +204,47 @@ app.get('/api/me/stats', handle((req) => {
   const p = me(req);
   return { stats: p.stats, history: p.history, balance: p.balance, gameNames: profiles.GAME_NAMES };
 }));
+
+// ---------- Admin ----------
+/** Anfrage kommt direkt von diesem PC (nicht über Heimnetz oder GitHub-Weiterleitung)? */
+const isLocalRequest = (req) => {
+  const ip = String(req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  return (ip === '127.0.0.1' || ip === '::1') && !req.headers['x-forwarded-for'];
+};
+const adminToken = (req) => req.get('x-admin');
+
+app.get('/api/admin/status', handle((req) => {
+  let loggedIn = false;
+  try { admin.requireAdmin(adminToken(req)); loggedIn = true; } catch { /* nicht angemeldet */ }
+  return { isSet: admin.isSet(), loggedIn, canSetupHere: !ONLINE && !admin.isSet() && isLocalRequest(req) };
+}));
+app.post('/api/admin/setup', handle((req) => {
+  if (admin.isSet()) throw new GameError('Das Admin-Passwort ist schon festgelegt.');
+  if (ONLINE || !isLocalRequest(req)) {
+    throw new GameError('Das Admin-Passwort kann nur direkt am PC bzw. im Codespace-Terminal festgelegt werden (npm run admin).', 403);
+  }
+  admin.setPassword(req.body?.password);
+  return { token: admin.login(req.body?.password) };
+}));
+app.post('/api/admin/login', handle((req) => {
+  checkLoginLimit(req.ip);
+  try {
+    const t = admin.login(req.body?.password);
+    failed.delete(req.ip);
+    return { token: t };
+  } catch (e) {
+    if (e instanceof GameError && e.status === 401) noteLoginFail(req.ip);
+    throw e;
+  }
+}));
+app.post('/api/admin/logout', handle((req) => { admin.logout(adminToken(req)); return { ok: true }; }));
+
+const adminRoute = (fn) => handle((req) => { admin.requireAdmin(adminToken(req)); return fn(req.body || {}, req); });
+app.get('/api/admin/players', adminRoute(() => admin.list()));
+app.post('/api/admin/adjust', adminRoute((b) => admin.adjust(b.name, b.mode, b.amount)));
+app.post('/api/admin/reset', adminRoute((b) => admin.resetProfile(b.name)));
+app.post('/api/admin/password', adminRoute((b) => admin.resetPassword(b.name, b.password)));
+app.post('/api/admin/delete', adminRoute((b) => admin.remove(b.name)));
 
 // ---------- Spiele ----------
 app.get('/api/games/:game/info', handle((req) => {
