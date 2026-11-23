@@ -11,6 +11,7 @@ const express = require('express');
 const db = require('./db');
 const profiles = require('./profiles');
 const admin = require('./admin');
+const duels = require('./duels');
 const { GameError } = require('./util');
 
 const CLOUD = process.argv.includes('--cloud');
@@ -269,6 +270,15 @@ app.post('/api/admin/adjust', adminRoute((b) => admin.adjust(b.name, b.mode, b.a
 app.post('/api/admin/reset', adminRoute((b) => admin.resetProfile(b.name)));
 app.post('/api/admin/password', adminRoute((b) => admin.resetPassword(b.name, b.password)));
 app.post('/api/admin/delete', adminRoute((b) => admin.remove(b.name)));
+
+// ---------- Duelle (1 gegen 1) ----------
+app.post('/api/duels/:action', handle((req) => {
+  const action = req.params.action;
+  if (!Object.hasOwn(duels.actions, action)) throw new GameError('Unbekannte Aktion.', 404);
+  const p = me(req);
+  const result = duels.actions[action](p, req.body || {});
+  return { ...result, balance: p.balance };
+}));
 
 // ---------- Spiele ----------
 app.get('/api/games/:game/info', handle((req) => {

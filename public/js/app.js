@@ -64,6 +64,12 @@ export function setBalance(n) {
     if (k < 1) balAnim = requestAnimationFrame(step);
   };
   balAnim = requestAnimationFrame(step);
+  // Hintergrund-Tabs führen keine Animationen aus – dort den Wert sofort anzeigen
+  if (document.hidden) {
+    cancelAnimationFrame(balAnim);
+    state.shownBalance = n;
+    balEl.textContent = fmt(n);
+  }
   updateBanner();
 }
 
@@ -262,4 +268,37 @@ window.addEventListener('hashchange', render);
   }
   if (!state.me) await openProfilePicker(true);
   render();
+  pollDuels();
 })();
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && state.shownBalance !== state.balance) {
+    state.shownBalance = state.balance;
+    balEl.textContent = fmt(state.balance);
+  }
+});
+
+// ---------- Duell-Benachrichtigungen ----------
+const seenChallenges = new Set();
+let firstDuelPoll = true;
+async function pollDuels() {
+  try {
+    if (state.me && document.visibilityState === 'visible') {
+      const r = await post('/api/duels/count');
+      const n = r.incoming.length + r.waiting;
+      const badge = document.getElementById('duelBadge');
+      badge.textContent = n;
+      badge.classList.toggle('hidden', !n);
+      for (const c of r.incoming) {
+        if (seenChallenges.has(c.id)) continue;
+        seenChallenges.add(c.id);
+        if (!firstDuelPoll) {
+          sfx.coin();
+          toast(`⚔️ ${c.from} fordert dich heraus: ${c.gameName} um ${fmt(c.stake)} Chips!`, 'ok');
+        }
+      }
+      firstDuelPoll = false;
+    }
+  } catch { /* nächster Versuch */ }
+  setTimeout(pollDuels, 6000);
+}

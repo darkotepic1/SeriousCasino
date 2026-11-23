@@ -45,6 +45,23 @@ Jeder, der es so herunterlädt, hat sein **eigenes** Casino mit eigenen Profilen
 
 Jedes Profil (nur ein Name, kein Passwort) hat sein eigenes Guthaben. Profil wechseln: oben rechts auf den Namen/Buchstaben klicken.
 
+## ⚔️ Duelle – 1 gegen 1
+
+Im Menü **Duelle** forderst du andere Spieler heraus – oder schreibst ein offenes Duell aus, das jeder annehmen darf.
+Beide setzen gleich viel (ab 10 Chips), der Gewinner bekommt den **ganzen Topf** – das Casino nimmt nichts.
+
+| Duell | So geht's |
+|---|---|
+| ⚡ Reaktionstest | 3 Runden: klicken, sobald das Feld grün wird. Kleinste Gesamtzeit gewinnt (zu früh = 1000 ms Strafe). |
+| 🧮 Kopfrechnen | 30 Sekunden lang Aufgaben lösen – wer mehr richtig hat, gewinnt. |
+| 🔴 Vier gewinnt | Abwechselnd Steine einwerfen, wer zuerst 4 in einer Reihe hat, gewinnt. 2 Minuten pro Zug. |
+| ✌️ Schere-Stein-Papier | Best of 5 – wer zuerst 3 Runden gewinnt. 2 Minuten pro Runde. |
+
+- Neue Herausforderungen erscheinen als Hinweis und als Zahl am Menüpunkt **Duelle**.
+- Unbeantwortete Herausforderungen verfallen nach 15 Minuten, Ablehnen/Zurückziehen gibt den Einsatz zurück.
+- Wer nicht weiterspielt, verliert nach Ablauf der Zeit. Unentschieden = Einsatz zurück.
+- Reaktionstest und Kopfrechnen spielt jeder für sich (nacheinander oder gleichzeitig); der Zweite hat dafür bis zu 10 Minuten Zeit.
+
 ## 🛠️ Admin-Bereich (Chips verteilen)
 
 Unter **Einstellungen → Admin-Bereich öffnen** kannst du jedem Spieler Chips **geben (+)**, **abziehen (−)** oder das Guthaben **genau setzen (=)**. Außerdem: Profil zurücksetzen, vergessenes Passwort neu vergeben, Spieler löschen. Änderungen erscheinen im Verlauf des Spielers als „Admin“.

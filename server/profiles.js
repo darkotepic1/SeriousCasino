@@ -38,6 +38,7 @@ const GAME_NAMES = {
   bingo: 'Schnell-Bingo',
   cups: 'Hütchenspiel',
   rps: 'Schere-Stein-Papier',
+  duel: 'Duelle (1 gegen 1)',
   admin: 'Admin',
 };
 
