@@ -5,6 +5,7 @@ import { h, esc, fmt, toast, modal, betControl, confetti } from './ui.js';
 import * as pages from './pages.js';
 
 export const GAMES = [
+  { id: 'livecrash', name: 'Live-Crash', icon: '🚀', desc: 'Eine Rakete für alle – wer steigt zuletzt aus?', tag: 'LIVE · Multiplayer', a: '#7a1f3d', b: '#2a0614', isNew: true },
   { id: 'slots', name: 'Slots', icon: '🎰', desc: '5 Walzen, 10 Gewinnlinien', tag: 'Klassiker', a: '#5a3d06', b: '#1d1402' },
   { id: 'blackjack', name: 'Blackjack', icon: '🃏', desc: 'Schlag den Dealer – Blackjack zahlt 3:2', tag: 'Karten', a: '#0f5132', b: '#06261a' },
   { id: 'roulette', name: 'Roulette', icon: '🎡', desc: 'Europäisch mit einer Null', tag: 'Tisch', a: '#5c1a1d', b: '#1f0809' },
@@ -237,7 +238,7 @@ async function render() {
       if (state.route !== route) return; // inzwischen weiternavigiert
       state.cleanup = (await mod.default(root.querySelector('.game-root'), gameCtx)) || null;
     } else if (pages[route]) {
-      state.cleanup = (await pages[route](appEl, { ...gameCtx, GAMES, state, server, openProfilePicker, loadMe, logout })) || null;
+      state.cleanup = (await pages[route](appEl, { ...gameCtx, GAMES, state, server, live, openProfilePicker, loadMe, logout })) || null;
     } else {
       location.hash = '#/';
     }
@@ -278,12 +279,22 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+export const live = { online: [], feed: [] };
+
 // ---------- Duell-Benachrichtigungen ----------
 const seenChallenges = new Set();
 let firstDuelPoll = true;
 async function pollDuels() {
   try {
     if (state.me && document.visibilityState === 'visible') {
+      // Lebenszeichen: zeigt den anderen, dass (und wo) du gerade spielst
+      post('/api/live/ping', { where: state.route }).then((l) => {
+        live.online = l.online;
+        live.feed = l.feed;
+        const oc = document.getElementById('onlineCount');
+        oc.textContent = l.online.length;
+        oc.classList.toggle('hidden', !l.online.length);
+      }).catch(() => {});
       const r = await post('/api/duels/count');
       const n = r.incoming.length + r.waiting;
       const badge = document.getElementById('duelBadge');

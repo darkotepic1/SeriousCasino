@@ -2,6 +2,7 @@
 import { h, esc, fmt, fmtSigned, toast, confirmDialog } from './ui.js';
 export { admin } from './adminpage.js';
 export { duels, duel } from './duelpage.js';
+export { live, cases, battle } from './livepage.js';
 import { sfx } from './sound.js';
 import { session } from './api.js';
 

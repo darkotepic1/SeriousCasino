@@ -43,9 +43,29 @@ export function confetti(count = 80) {
 /** Gewinn-Feedback: Sound + bei großem Gewinn Konfetti */
 export function celebrate(payout, bet) {
   if (payout <= 0) return;
-  if (payout >= bet * 10) { sfx.bigWin(); confetti(); }
+  if (payout >= bet * 10) { sfx.bigWin(); confetti(); bigWin(payout, bet); }
   else if (payout > bet) sfx.win();
   else sfx.coin();
+}
+
+/** Große Einblendung mit hochzählendem Gewinn (ab 10× Einsatz) */
+export function bigWin(payout, bet) {
+  const mult = payout / Math.max(1, bet);
+  const title = mult >= 100 ? 'MEGA WIN' : mult >= 30 ? 'HUGE WIN' : 'BIG WIN';
+  const el = h(`<div class="bigwin"><div class="bigwin-rays"></div><div class="bigwin-card">
+    <div class="bigwin-title">${title}</div><div class="bigwin-amount">0</div>
+    <div class="bigwin-mult">${mult.toLocaleString('de-DE', { maximumFractionDigits: 2 })}× Einsatz</div></div></div>`);
+  document.body.appendChild(el);
+  const amt = el.querySelector('.bigwin-amount');
+  const t0 = performance.now(), dur = 1600;
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / dur);
+    amt.textContent = '+' + fmt(payout * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 500); };
+  setTimeout(close, 2800);
 }
 
 export function modal(contentEl, { closable = true } = {}) {

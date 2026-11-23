@@ -39,6 +39,9 @@ const GAME_NAMES = {
   cups: 'Hütchenspiel',
   rps: 'Schere-Stein-Papier',
   duel: 'Duelle (1 gegen 1)',
+  livecrash: 'Live-Crash',
+  caseopen: 'Case öffnen',
+  casebattle: 'Case Battles',
   admin: 'Admin',
 };
 
@@ -222,6 +225,7 @@ function record(p, game, bet, payout, detail = '') {
   g.paid += payout;
   if (net > g.biggestWin) g.biggestWin = net;
   p.history.unshift({ game, bet, payout, net, balance: p.balance, time: Date.now(), detail });
+  require('./live').noteRound(p, game, bet, payout);
   if (p.history.length > HISTORY_LIMIT) p.history.length = HISTORY_LIMIT;
 }
 

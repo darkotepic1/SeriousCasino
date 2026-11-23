@@ -115,6 +115,47 @@ export async function admin(root, ctx) {
           </div></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Noch keine Spieler.</p>'}
     </div>`;
 
+    // ---------- Live-Crash steuern + Online-Liste ----------
+    body.insertAdjacentHTML('beforeend', `<div class="panel section lc-admin">
+      <h2>🚀 Live-Crash steuern <span class="muted" style="font-size:.8rem;font-weight:500">(für Spieler unsichtbar)</span></h2>
+      <div class="lca-state"></div>
+      <div class="row" style="flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-red" data-rig="now">💥 Jetzt crashen</button>
+        <input class="input lca-val" type="number" step="0.01" min="1" placeholder="z. B. 1,50" style="max-width:130px">
+        <button class="btn" data-rig="current">Diese Runde crasht bei …</button>
+        <button class="btn" data-rig="next">Nächste Runde crasht bei …</button>
+        <button class="btn btn-ghost" data-rig="clear">Vorgabe löschen</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:.8rem">„Diese Runde“ geht nur, solange die Rakete noch unter dem Wert ist. 1,00 = sofortiger Absturz beim Start.</p>
+    </div>
+    <div class="panel section"><h2>🟢 Gerade online</h2><div class="lca-online"></div></div>`);
+    const lcaState = body.querySelector('.lca-state');
+    const lcaOnline = body.querySelector('.lca-online');
+    const paintLc = (s) => {
+      const phase = { betting: `Wettphase (${Math.ceil(s.timeLeft / 1000)} s)`, running: `fliegt – <b>${s.multiplier.toFixed(2)}×</b>`, crashed: `abgestürzt bei ${s.crashPoint?.toFixed(2)}×` }[s.phase];
+      lcaState.innerHTML = `<div class="kv"><span>Runde</span><span>${phase}</span></div>
+        <div class="kv"><span>Echter Absturzpunkt</span><span class="gold">${s.realCrashPoint ? s.realCrashPoint.toFixed(2) + '×' : '– (wird beim Start ausgelost)'}${s.rigged ? ' · <span class="neg">manipuliert</span>' : ''}</span></div>
+        <div class="kv"><span>Vorgabe nächste Runde</span><span>${s.nextRig ? s.nextRig.toFixed(2) + '×' : 'keine (Zufall)'}</span></div>
+        <div class="kv"><span>Einsätze</span><span>${s.bets.length ? s.bets.map((b) => `${esc(b.name)} ${fmt(b.bet)}${b.cashedAt ? ` ✓${b.cashedAt.toFixed(2)}×` : ''}`).join(' · ') : 'keine'}</span></div>`;
+    };
+    const lcLoop = async () => {
+      if (!alive || !body.contains(lcaState)) return;
+      try {
+        paintLc(await adminApi('GET', '/api/admin/livecrash'));
+        const o = await adminApi('GET', '/api/admin/online');
+        lcaOnline.innerHTML = o.online.map((x) => `<div class="kv"><span>${esc(x.name)}</span><span>${esc(x.where)}</span></div>`).join('') || '<p class="muted" style="margin:0">Niemand.</p>';
+      } catch { /* egal */ }
+      setTimeout(lcLoop, 1000);
+    };
+    lcLoop();
+    body.querySelectorAll('[data-rig]').forEach((b) => b.addEventListener('click', async () => {
+      try {
+        const value = Number(String(body.querySelector('.lca-val').value).replace(',', '.'));
+        paintLc(await adminApi('POST', '/api/admin/livecrash/rig', { mode: b.dataset.rig, value }));
+        toast('Erledigt.', 'ok');
+      } catch (e) { toast(e.message, 'err'); }
+    }));
+
     body.querySelector('#adminLogout').addEventListener('click', async () => {
       try { await adminApi('POST', '/api/admin/logout'); } catch { /* egal */ }
       adminToken.set('');

@@ -12,6 +12,9 @@ const db = require('./db');
 const profiles = require('./profiles');
 const admin = require('./admin');
 const duels = require('./duels');
+const live = require('./live');
+const livecrash = require('./livecrash');
+const cases = require('./cases');
 const { GameError } = require('./util');
 
 const CLOUD = process.argv.includes('--cloud');
@@ -270,12 +273,47 @@ app.post('/api/admin/adjust', adminRoute((b) => admin.adjust(b.name, b.mode, b.a
 app.post('/api/admin/reset', adminRoute((b) => admin.resetProfile(b.name)));
 app.post('/api/admin/password', adminRoute((b) => admin.resetPassword(b.name, b.password)));
 app.post('/api/admin/delete', adminRoute((b) => admin.remove(b.name)));
+app.get('/api/admin/livecrash', adminRoute(() => livecrash.adminState()));
+app.post('/api/admin/livecrash/rig', adminRoute((b) => livecrash.adminRig(b)));
+app.get('/api/admin/online', adminRoute(() => ({ online: live.online() })));
+
+// ---------- Live: wer ist online, großer-Gewinn-Feed ----------
+app.post('/api/live/ping', handle((req) => {
+  const p = me(req);
+  const where = String(req.body?.where || 'home').replace(/[^a-z0-9-]/gi, '').slice(0, 20) || 'home';
+  live.touch(p, where);
+  return { online: live.online(), feed: live.recent(), balance: p.balance };
+}));
+
+// ---------- Live-Crash (gemeinsame Runde) ----------
+app.get('/api/live/crash/state', handle((req) => {
+  let viewer = null;
+  try { viewer = me(req); live.touch(viewer, 'livecrash'); } catch { /* Zuschauen ohne Anmeldung ist ok */ }
+  return { ...livecrash.publicState(viewer?.id), balance: viewer?.balance ?? null };
+}));
+app.post('/api/live/crash/:action', handle((req) => {
+  const action = req.params.action;
+  if (!['bet', 'cashout'].includes(action)) throw new GameError('Unbekannte Aktion.', 404);
+  const p = me(req);
+  live.touch(p, 'livecrash');
+  return { ...livecrash[action](p, req.body || {}), balance: p.balance };
+}));
+
+// ---------- Cases & Case Battles ----------
+app.post('/api/cases/:action', handle((req) => {
+  const action = req.params.action;
+  if (!Object.hasOwn(cases.actions, action)) throw new GameError('Unbekannte Aktion.', 404);
+  const p = me(req);
+  live.touch(p, 'cases');
+  return { ...cases.actions[action](p, req.body || {}), balance: p.balance };
+}));
 
 // ---------- Duelle (1 gegen 1) ----------
 app.post('/api/duels/:action', handle((req) => {
   const action = req.params.action;
   if (!Object.hasOwn(duels.actions, action)) throw new GameError('Unbekannte Aktion.', 404);
   const p = me(req);
+  if (action !== 'count') live.touch(p, 'duels');
   const result = duels.actions[action](p, req.body || {});
   return { ...result, balance: p.balance };
 }));
@@ -293,6 +331,7 @@ app.post('/api/games/:game/:action', handle((req) => {
     throw new GameError('Unbekannte Aktion.', 404);
   }
   const p = me(req);
+  live.touch(p, req.params.game);
   const result = g[action](p, req.body || {});
   return { ...result, balance: p.balance };
 }));
@@ -306,6 +345,7 @@ ready.then(start, (e) => {
 });
 
 function start() {
+livecrash.start();
 const server = app.listen(PORT, HOST, () => {
   console.log('');
   console.log('  ==========================================');

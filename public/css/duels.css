@@ -44,9 +44,16 @@
 .c4-dot.theirs, .c4-cell.theirs { background: radial-gradient(circle at 35% 35%, #ff8a8d, #c0262d 60%, #7a1418); }
 .c4-board { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 10px; width: min(100%, 470px); border-radius: 16px; background: linear-gradient(180deg, #1d4ed8, #1e3a8a); box-shadow: var(--shadow); }
 .c4-cell { aspect-ratio: 1; border-radius: 50%; background: #07110c; box-shadow: inset 0 3px 6px rgba(0, 0, 0, .6); }
-.c4-cell.mine, .c4-cell.theirs { animation: c4Drop .35s ease-in; box-shadow: inset 0 -3px 4px rgba(0, 0, 0, .35); }
-.c4-cell.win { outline: 3px solid #fff; outline-offset: -3px; animation: symWin .8s ease-in-out infinite; }
-@keyframes c4Drop { from { transform: translateY(-120px); opacity: .3; } }
+.c4-cell.mine, .c4-cell.theirs { box-shadow: inset 0 -3px 4px rgba(0, 0, 0, .35); }
+/* Nur der neue Stein fällt – so tief wie seine Reihe, mit kleinem Aufprall */
+.c4-cell.drop { animation: c4Drop calc(.22s + var(--row) * .06s) cubic-bezier(.45, 0, .9, .55) both, c4Bounce .25s ease-out calc(.22s + var(--row) * .06s); position: relative; z-index: 1; }
+@keyframes c4Drop { from { transform: translateY(calc((var(--row) + 1) * -112%)); } to { transform: translateY(0); } }
+@keyframes c4Bounce { 40% { transform: translateY(-10%); } 100% { transform: translateY(0); } }
+.c4-cell.win { outline: 3px solid #fff; outline-offset: -3px; animation: c4Win .9s ease-in-out infinite; }
+@keyframes c4Win { 50% { filter: brightness(1.5); transform: scale(1.08); } }
+.c4-board { overflow: hidden; }
+.c4-ghost { display: block; width: 70%; aspect-ratio: 1; margin: 4px auto 0; border-radius: 50%; opacity: 0; transition: opacity .15s; background: radial-gradient(circle at 35% 35%, var(--gold2), var(--gold) 60%, var(--gold-dark)); }
+.c4-board.active .c4-cols button:hover .c4-ghost { opacity: .45; }
 .c4-cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, 1fr); }
 .c4-cols button { background: transparent; border: 0; cursor: default; }
 .c4-board.active .c4-cols button { cursor: pointer; }

@@ -233,17 +233,40 @@ export async function duel(root, ctx) {
   }
 
   // ---------- Vier gewinnt ----------
+  // Das Brett wird nur EINMAL aufgebaut; danach werden nur geänderte Felder neu eingefärbt,
+  // damit nur der neue Stein fällt (vorher fielen bei jeder Aktualisierung alle Steine neu).
   function renderConnect4(d) {
     const v = d.view;
-    const cells = v.board.map((x, i) => `<div class="c4-cell ${x ? 'p' + x : ''} ${x && x === v.me ? 'mine' : x ? 'theirs' : ''} ${v.winLine?.includes(i) ? 'win' : ''}"></div>`).join('');
-    const status = d.status === 'done' ? resultBanner(d) : `<p class="c4-turn ${v.myTurn ? 'pos' : ''}">${v.myTurn ? `Du bist dran! (${timeLeft(v.timeLeft)})` : `Gegner ist dran … (${timeLeft(v.timeLeft)})`}</p>`;
-    stage.innerHTML = `<div class="panel c4-wrap">${status}
-      <div class="c4-legend"><span><i class="c4-dot mine"></i>Du</span><span><i class="c4-dot theirs"></i>Gegner</span></div>
-      <div class="c4-board ${v.myTurn ? 'active' : ''}">${cells}<div class="c4-cols">${[0, 1, 2, 3, 4, 5, 6].map((c) => `<button data-c="${c}" aria-label="Spalte ${c + 1}"></button>`).join('')}</div></div></div>`;
-    stage.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', async () => {
-      if (!v.myTurn || d.status !== 'active') return;
-      try { sfx.chip(); update(await act({ type: 'move', col: Number(b.dataset.c) })); } catch (e) { toast(e.message, 'err'); }
-    }));
+    local.c4 = { d, v };
+    if (!stage.querySelector('.c4-board')) {
+      stage.innerHTML = `<div class="panel c4-wrap"><div class="c4-status"></div>
+        <div class="c4-legend"><span><i class="c4-dot mine"></i>Du</span><span><i class="c4-dot theirs"></i>Gegner</span></div>
+        <div class="c4-board">${v.board.map((_, i) => `<div class="c4-cell" style="--row:${Math.floor(i / 7)}"></div>`).join('')}
+          <div class="c4-cols">${[0, 1, 2, 3, 4, 5, 6].map((c) => `<button data-c="${c}" aria-label="Spalte ${c + 1}"><span class="c4-ghost"></span></button>`).join('')}</div></div></div>`;
+      stage.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', async () => {
+        const cur = local.c4;
+        if (!cur.v.myTurn || cur.d.status !== 'active' || local.c4Busy) return;
+        local.c4Busy = true;
+        try { sfx.chip(); update(await act({ type: 'move', col: Number(b.dataset.c) })); } catch (e) { toast(e.message, 'err'); }
+        local.c4Busy = false;
+      }));
+      local.c4Prev = new Array(42).fill(0);
+      local.c4First = true;
+    }
+    const cells = stage.querySelectorAll('.c4-cell');
+    v.board.forEach((x, i) => {
+      if (x === local.c4Prev[i]) return;
+      const el = cells[i];
+      el.className = `c4-cell ${x === v.me ? 'mine' : 'theirs'} ${local.c4First ? '' : 'drop'}`;
+      if (!local.c4First) sfx.reelStop();
+    });
+    local.c4Prev = [...v.board];
+    local.c4First = false;
+    if (v.winLine) v.winLine.forEach((i) => cells[i].classList.add('win'));
+    stage.querySelector('.c4-board').classList.toggle('active', v.myTurn);
+    const status = stage.querySelector('.c4-status');
+    const html = d.status === 'done' ? resultBanner(d) : `<p class="c4-turn ${v.myTurn ? 'pos' : ''}">${v.myTurn ? `Du bist dran! (${timeLeft(v.timeLeft)})` : `Gegner ist dran … (${timeLeft(v.timeLeft)})`}</p>`;
+    if (status.innerHTML !== html) status.innerHTML = html;
   }
 
   // ---------- Schere-Stein-Papier Best of 5 ----------

@@ -117,7 +117,12 @@ async function load() {
   return data;
 }
 
+// Nur speichern, wenn sich wirklich etwas geändert hat (Live-Spiele fragen mehrmals pro Sekunde ab)
+let lastSaved = null;
 function save() {
+  const json = JSON.stringify(data);
+  if (json === lastSaved) return;
+  lastSaved = json;
   if (store === fileStore) fileStore.writeSync(JSON.stringify(data, null, 1));
   else scheduleDbWrite();
 }
