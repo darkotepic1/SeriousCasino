@@ -42,6 +42,8 @@ const GAME_NAMES = {
   livecrash: 'Live-Crash',
   liveroulette: 'Live-Roulette',
   jackpot: 'Jackpot',
+  bjtable: 'Blackjack-Tisch',
+  holdem: "Texas Hold'em",
   caseopen: 'Case öffnen',
   casebattle: 'Case Battles',
   admin: 'Admin',

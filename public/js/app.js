@@ -17,6 +17,8 @@ export const GAMES = [
   { id: 'livecrash', cat: 'live', name: 'Live-Crash', icon: '🚀', desc: 'Eine Rakete für alle – wer steigt zuletzt aus?', tag: 'LIVE', a: '#7a1f3d', b: '#2a0614', hot: true },
   { id: 'liveroulette', cat: 'live', name: 'Live-Roulette', icon: '🎡', desc: 'Ein Rad, alle Spieler, eine Kugel', tag: 'LIVE', a: '#7a1f1f', b: '#2a0606', hot: true },
   { id: 'jackpot', cat: 'live', name: 'Jackpot', icon: '💰', desc: 'Alle zahlen ein – einer gewinnt alles', tag: 'LIVE', a: '#7a5c0f', b: '#2a1e04', hot: true },
+  { id: 'bjtable', cat: 'live', name: 'Blackjack-Tisch', icon: '♠️', desc: 'Bis zu 5 Spieler gegen einen Dealer', tag: 'MULTI', a: '#0f5132', b: '#04200f', hot: true },
+  { id: 'holdem', cat: 'live', name: "Texas Hold'em", icon: '♣️', desc: 'Poker gegen deine Freunde – bis zu 6 am Tisch', tag: 'MULTI', a: '#1a3d6b', b: '#07142a', hot: true },
   { id: 'crash', cat: 'originals', name: 'Crash', icon: '🚀', desc: 'Steig aus, bevor es kracht', tag: 'Nervenkitzel', a: '#3b1d5c', b: '#12081f', hot: true },
   { id: 'mines', cat: 'originals', name: 'Mines', icon: '💣', desc: 'Finde Diamanten, meide Minen', tag: 'Taktik', a: '#1d4a4f', b: '#071a1c', hot: true },
   { id: 'plinko', cat: 'originals', name: 'Plinko', icon: '🎯', desc: 'Kugeln fallen lassen, Multiplikator fangen', tag: 'Glück', a: '#5c3a1a', b: '#1f1208', hot: true },

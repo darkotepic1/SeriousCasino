@@ -347,6 +347,27 @@ app.post('/api/live/jackpot/:action', handle((req) => {
   return { ...jackpot[a](p, req.body || {}), balance: p.balance };
 }));
 
+// ---------- Multiplayer-Tische: Blackjack & Texas Hold'em ----------
+const bjtable = require('./bjtable');
+app.get('/api/table/blackjack', handle((req) => { const v = viewer(req, 'bjtable'); return { ...bjtable.view(v?.id), balance: v?.balance ?? null }; }));
+app.post('/api/table/blackjack/:action', handle((req) => {
+  const a = req.params.action;
+  if (!['sit', 'leave', 'bet', 'act'].includes(a)) throw new GameError('Unbekannte Aktion.', 404);
+  const p = me(req);
+  live.touch(p, 'bjtable');
+  return { ...bjtable[a](p, req.body || {}), balance: p.balance };
+}));
+
+const holdem = require('./holdem');
+app.get('/api/table/holdem', handle((req) => { const v = viewer(req, 'holdem'); return { ...holdem.view(v?.id), balance: v?.balance ?? null }; }));
+app.post('/api/table/holdem/:action', handle((req) => {
+  const a = req.params.action;
+  if (!['sit', 'rebuy', 'leave', 'act'].includes(a)) throw new GameError('Unbekannte Aktion.', 404);
+  const p = me(req);
+  live.touch(p, 'holdem');
+  return { ...holdem[a](p, req.body || {}), balance: p.balance };
+}));
+
 // ---------- Cases & Case Battles ----------
 app.post('/api/cases/:action', handle((req) => {
   const action = req.params.action;
@@ -425,6 +446,8 @@ function start() {
 livecrash.start();
 liveroulette.start();
 jackpot.start();
+bjtable.start();
+holdem.start();
 const server = app.listen(PORT, HOST, () => {
   console.log('');
   console.log('  ==========================================');
