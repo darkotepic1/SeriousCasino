@@ -507,6 +507,7 @@ process.on('uncaughtException', (e) => console.error('Unerwarteter Fehler:', e &
 process.on('unhandledRejection', (e) => console.error('Unbehandelter Fehler:', e && e.stack || e));
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+process.on('SIGHUP', shutdown); // Windows: Konsolenfenster wird geschlossen
 }
 
 function openBrowser() {

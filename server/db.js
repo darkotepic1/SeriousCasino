@@ -88,22 +88,23 @@ if (DATABASE_URL) {
 
 // Schreiben in die Datenbank: nie zwei gleichzeitig, immer der neueste Stand zuletzt
 let writing = null;
-let dirty = false;
-function scheduleDbWrite() {
-  dirty = true;
+let pendingJson = null;
+function scheduleDbWrite(json) {
+  pendingJson = json;
   if (writing) return;
   writing = (async () => {
-    while (dirty) {
-      dirty = false;
-      const json = JSON.stringify(data);
+    while (pendingJson !== null) {
+      const next = pendingJson;
+      pendingJson = null;
       for (let attempt = 1; ; attempt++) {
         try {
-          await store.write(json);
+          await store.write(next);
           break;
         } catch (e) {
           console.warn(`Speichern fehlgeschlagen (Versuch ${attempt}):`, e.message);
           // Datenbank nicht erreichbar: nach kurzer Pause weiter versuchen (Stand geht nicht verloren, er liegt im Speicher)
           await new Promise((r) => setTimeout(r, Math.min(10000, 1000 * attempt)));
+          if (pendingJson !== null) break; // inzwischen gibt es einen neueren Stand – den speichern
         }
       }
     }
@@ -112,23 +113,32 @@ function scheduleDbWrite() {
 
 async function load() {
   data = normalize(await store.read());
-  save();
+  saveNow();
   await flush();
   return data;
 }
 
-// Nur speichern, wenn sich wirklich etwas geändert hat (Live-Spiele fragen mehrmals pro Sekunde ab)
+// Gespeichert wird gebündelt: höchstens alle paar hundert Millisekunden und nur, wenn sich wirklich etwas geändert hat.
+// (Früher wurde bei JEDER Anfrage der komplette Stand verglichen – das hat den kleinen Gratis-Server ausgebremst.)
+const SAVE_DELAY = store === fileStore ? 300 : 1000;
 let lastSaved = null;
+let saveTimer = null;
 function save() {
+  if (!saveTimer) saveTimer = setTimeout(saveNow, SAVE_DELAY);
+}
+function saveNow() {
+  clearTimeout(saveTimer);
+  saveTimer = null;
   const json = JSON.stringify(data);
   if (json === lastSaved) return;
   lastSaved = json;
-  if (store === fileStore) fileStore.writeSync(JSON.stringify(data, null, 1));
-  else scheduleDbWrite();
+  if (store === fileStore) fileStore.writeSync(json);
+  else scheduleDbWrite(json);
 }
 
-/** Wartet, bis alles gespeichert ist (z. B. vor dem Herunterfahren) */
+/** Speichert sofort und wartet, bis alles geschrieben ist (z. B. vor dem Herunterfahren) */
 async function flush() {
+  if (saveTimer) saveNow();
   while (writing) await writing;
 }
 

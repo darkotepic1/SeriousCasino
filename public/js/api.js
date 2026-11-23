@@ -37,7 +37,8 @@ function showWaking(on) {
 export async function apiFetch(url, init) {
   const started = Date.now();
   let showTimer = null;
-  if (API_BASE) showTimer = setTimeout(() => showWaking(true), 2500);
+  // Nur wenn eine Antwort wirklich lange ausbleibt (Kaltstart), nicht schon bei kurzen Verzögerungen
+  if (API_BASE) showTimer = setTimeout(() => showWaking(true), 8000);
   try {
     for (;;) {
       let res = null;
