@@ -502,6 +502,9 @@ const shutdown = async () => {
   try { await db.flush(); } catch { /* egal */ }
   process.exit(0);
 };
+// Ein unerwarteter Fehler soll nie den ganzen Server (und alle laufenden Runden) beenden
+process.on('uncaughtException', (e) => console.error('Unerwarteter Fehler:', e && e.stack || e));
+process.on('unhandledRejection', (e) => console.error('Unbehandelter Fehler:', e && e.stack || e));
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 }

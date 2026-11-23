@@ -69,4 +69,14 @@ function parseAmounts(body, keys, profile, { allowZeroTotal = false } = {}) {
   return { amounts, total };
 }
 
-module.exports = { GameError, randInt, randFloat, shuffle, parseBet, makeDeck, payoutFor, parseAmounts };
+/** setInterval, das bei einem Fehler nur protokolliert, statt den ganzen Server abstürzen zu lassen */
+function safeInterval(name, fn, ms) {
+  let last = 0;
+  return setInterval(() => {
+    try { fn(); } catch (e) {
+      if (Date.now() - last > 10000) { last = Date.now(); console.error(`[${name}] Fehler im Ablauf:`, e && e.stack || e); }
+    }
+  }, ms);
+}
+
+module.exports = { safeInterval, GameError, randInt, randFloat, shuffle, parseBet, makeDeck, payoutFor, parseAmounts };

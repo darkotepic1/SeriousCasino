@@ -59,7 +59,7 @@ function tick() {
 function start() {
   refundAfterRestart();
   newRound();
-  setInterval(tick, 100);
+  require('./util').safeInterval('liveroulette', tick, 100);
 }
 
 function state(viewerId) {

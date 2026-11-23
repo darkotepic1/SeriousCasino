@@ -45,7 +45,7 @@ function start() {
   refundAfterRestart();
   T = { seats: new Array(SEATS).fill(null), shoe: makeDeck(6) };
   reset();
-  setInterval(tick, 200);
+  require('./util').safeInterval('bjtable', tick, 200);
 }
 
 function deal(now) {

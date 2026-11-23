@@ -70,7 +70,7 @@ function tick() {
 function start() {
   refundAfterRestart();
   newRound();
-  setInterval(tick, 200);
+  require('./util').safeInterval('jackpot', tick, 200);
 }
 
 function state(viewerId) {

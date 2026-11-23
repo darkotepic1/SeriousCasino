@@ -57,7 +57,7 @@ function start() {
   db.get().holdemPending = {};
   db.save();
   T = { seats: new Array(SEATS).fill(null), button: -1, phase: 'waiting', board: [], until: null, hand: null, log: [], winners: null };
-  setInterval(tick, 250);
+  require('./util').safeInterval('holdem', tick, 250);
 }
 
 const inHand = (s) => s && s.cards.length === 2 && !s.folded;
@@ -306,7 +306,9 @@ function leave(p) {
   const i = seatOf(p);
   if (i < 0) throw new GameError('Du sitzt nicht am Tisch.');
   const s = T.seats[i];
-  if (inHand(s) && (T.phase === 'playing' || T.phase === 'runout')) {
+  if (s.cards.length && s.folded && (T.phase === 'playing' || T.phase === 'runout')) {
+    s.leaving = true; // schon gepasst → nach der Hand aufstehen (Einsätze bleiben im Pot)
+  } else if (inHand(s) && (T.phase === 'playing' || T.phase === 'runout')) {
     // Mitten in der Hand: passen und nach der Hand aufstehen
     s.leaving = true;
     if (T.turn === i) doAction(s, 'fold', 0, Date.now());

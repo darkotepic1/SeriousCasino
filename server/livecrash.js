@@ -90,7 +90,7 @@ function tick() {
 function start() {
   refundAfterRestart();
   newRound();
-  setInterval(tick, 50);
+  require('./util').safeInterval('livecrash', tick, 50);
 }
 
 function currentMult(now = Date.now()) {
