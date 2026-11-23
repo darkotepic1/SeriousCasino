@@ -90,7 +90,9 @@ Alle Ergebnisse werden auf dem Server mit einem kryptografischen Zufallsgenerato
 
 **Am selben PC:** Jeder legt sein eigenes Profil an und wechselt oben rechts. Die **Rangliste** zeigt, wer vorne liegt.
 
-**Übers Internet, jeder von zu Hause (GitHub Codespaces):** siehe **[ONLINE-SPIELEN.md](ONLINE-SPIELEN.md)** – kostenlos, Freunde brauchen nur einen Link. Dort sind Passwörter Pflicht.
+**Immer online unter https://oeodl.github.io/SeriousCasino/ (GitHub Pages + Render + Neon, kostenlos):** siehe **[IMMER-ONLINE.md](IMMER-ONLINE.md)** – einmal einrichten, danach läuft es rund um die Uhr, auch wenn dein PC aus ist.
+
+**Übers Internet, nur bei Bedarf (GitHub Codespaces):** siehe **[ONLINE-SPIELEN.md](ONLINE-SPIELEN.md)** – kostenlos, Freunde brauchen nur einen Link. Dort sind Passwörter Pflicht.
 
 **Profil-Passwort:** In den Einstellungen kann jedes Profil ein Passwort bekommen (lokal optional). Mit „Abmelden“ meldest du dich auf dem Gerät ab.
 

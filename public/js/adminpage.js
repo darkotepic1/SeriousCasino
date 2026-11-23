@@ -1,6 +1,7 @@
 // Admin-Bereich: Chips geben/abziehen/setzen, Profile zurücksetzen, Passwörter neu vergeben, Spieler löschen.
 import { h, esc, fmt, fmtSigned, toast, confirmDialog, modal } from './ui.js';
 import { sfx } from './sound.js';
+import { apiFetch } from './api.js';
 
 const signCls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
 const ADMIN_KEY = 'casino.admin';
@@ -10,7 +11,7 @@ const adminToken = {
 };
 
 async function adminApi(method, url, body) {
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     method,
     headers: { 'Content-Type': 'application/json', 'X-Admin': adminToken.get() },
     body: body === undefined ? undefined : JSON.stringify(body),

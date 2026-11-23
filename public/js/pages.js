@@ -108,6 +108,8 @@ export async function leaderboard(root, ctx) {
 async function fillInvite(box, ctx) {
   let info = { lan: false, urls: [] };
   try { info = await ctx.get('/api/server-info'); } catch { /* egal */ }
+  // Online: genau die Adresse teilen, die gerade im Browser offen ist (z. B. der github.io-Link)
+  if (info.online) info.urls = [location.origin + location.pathname];
   if ((info.lan || info.online) && info.urls.length) {
     box.innerHTML = `<h2>${info.online ? '🌍' : '📶'} Freunde einladen</h2>
       <p class="muted">${info.online

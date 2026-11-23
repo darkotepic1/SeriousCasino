@@ -1,0 +1,23 @@
+# Bauplan für Render (kostenloser Server). Render liest diese Datei beim Einrichten über "Blueprint".
+services:
+  - type: web
+    name: seriouscasino
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --omit=dev
+    startCommand: node server/index.js --cloud
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: TZ
+        value: Europe/Berlin
+      - key: CASINO_ALLOWED_ORIGINS
+        value: https://oeodl.github.io
+      # Werden beim Einrichten abgefragt (geheim, stehen NICHT im Code):
+      - key: DATABASE_URL
+        sync: false
+      - key: CASINO_ADMIN_PASSWORD
+        sync: false

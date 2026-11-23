@@ -17,11 +17,16 @@ function readConfig() {
   try { return JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch { return {}; }
 }
 
+// In der Cloud (Render) kommt das Admin-Passwort aus der Umgebungsvariable CASINO_ADMIN_PASSWORD
+const ENV_PW = process.env.CASINO_ADMIN_PASSWORD || '';
+const fromEnv = () => ENV_PW.length >= 6;
+
 function isSet() {
-  return !!readConfig().passwordHash;
+  return fromEnv() || !!readConfig().passwordHash;
 }
 
 function setPassword(pw) {
+  if (fromEnv()) throw new GameError('Das Admin-Passwort wird in den Server-Einstellungen (CASINO_ADMIN_PASSWORD) festgelegt.');
   const s = String(pw ?? '');
   if (s.length < 6) throw new GameError('Das Admin-Passwort braucht mindestens 6 Zeichen.');
   const salt = crypto.randomBytes(16).toString('hex');
@@ -32,6 +37,12 @@ function setPassword(pw) {
 }
 
 function check(pw) {
+  if (fromEnv()) {
+    // Vergleich über Hashes gleicher Länge (keine Rückschlüsse über die Antwortzeit)
+    const a = crypto.createHash('sha256').update(String(pw ?? '')).digest();
+    const b = crypto.createHash('sha256').update(ENV_PW).digest();
+    return crypto.timingSafeEqual(a, b);
+  }
   const cfg = readConfig();
   if (!cfg.passwordHash) return false;
   const [salt, hash] = cfg.passwordHash.split(':');

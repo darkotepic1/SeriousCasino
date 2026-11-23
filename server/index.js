@@ -2,6 +2,8 @@
 // Standard: lauscht ausschließlich auf 127.0.0.1:3000 (nur dieser PC).
 // Mit --lan (start-heimnetz.bat): zusätzlich im Heimnetz erreichbar – aber nur für Geräte aus dem lokalen Netz.
 // Mit --online (GitHub Codespaces): über den Codespaces-Link aus dem Internet erreichbar, Passwörter sind Pflicht.
+// Mit --cloud (Render + github.io): wie --online, zusätzlich darf die github.io-Seite den Server ansprechen,
+//   Daten liegen in der Datenbank (DATABASE_URL), Admin-Passwort aus CASINO_ADMIN_PASSWORD.
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -11,11 +13,17 @@ const profiles = require('./profiles');
 const admin = require('./admin');
 const { GameError } = require('./util');
 
-const ONLINE = process.argv.includes('--online');
+const CLOUD = process.argv.includes('--cloud');
+const ONLINE = CLOUD || process.argv.includes('--online');
 const LAN = process.argv.includes('--lan');
 const HOST = process.env.CASINO_BIND || (LAN || ONLINE ? '0.0.0.0' : '127.0.0.1'); // CASINO_BIND nur für Tests
 const REQUIRE_PASSWORD = ONLINE; // im Internet: Passwort Pflicht (lokal/Heimnetz optional)
-const PORT = Number(process.env.CASINO_PORT) || 3000; // optional anderer Port, z. B. zum Testen
+// Render gibt den Port über PORT vor; sonst optional CASINO_PORT (z. B. zum Testen)
+const PORT = Number((CLOUD && process.env.PORT) || process.env.CASINO_PORT) || 3000;
+// Webseiten, die den Server von außen ansprechen dürfen (die github.io-Seite)
+const ALLOWED_ORIGINS = new Set(
+  (process.env.CASINO_ALLOWED_ORIGINS || (CLOUD ? 'https://oeodl.github.io' : '')).split(',').map((s) => s.trim().replace(/\/$/, '')).filter(Boolean),
+);
 const URL = `http://127.0.0.1:${PORT}`;
 
 /** Private/lokale IPv4-Adresse? (Heimnetz-Bereiche + dieser PC) */
@@ -55,6 +63,7 @@ function hostAllowed(hostHeader) {
     const name = host.replace(/:\d+$/, '');
     if (/^[a-z0-9-]+\.app\.github\.dev$/.test(name) || /^[a-z0-9-]+\.preview\.app\.github\.dev$/.test(name)) return true;
     if (process.env.CASINO_PUBLIC_HOST && name === process.env.CASINO_PUBLIC_HOST.toLowerCase()) return true;
+    if (process.env.RENDER_EXTERNAL_HOSTNAME && name === process.env.RENDER_EXTERNAL_HOSTNAME.toLowerCase()) return true;
     if (name === '127.0.0.1' || name === 'localhost') return true;
     return false;
   }
@@ -75,7 +84,7 @@ function clientAllowed(addr) {
   return LAN ? isPrivateIPv4(ip) : ip === '127.0.0.1';
 }
 
-db.load();
+const ready = db.load();
 
 // Alle Spiele aus server/games laden (Dateiname = Spiel-ID)
 const games = {};
@@ -98,6 +107,21 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'no-referrer');
   next();
 });
+
+// Die github.io-Seite darf den Server ansprechen (CORS) – nur die freigegebenen Adressen
+app.use('/api', (req, res, next) => {
+  const origin = String(req.headers.origin || '').replace(/\/$/, '');
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session, X-Admin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Max-Age', '600');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(origin && ALLOWED_ORIGINS.has(origin) ? 204 : 403);
+  next();
+});
+app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 // Sperre gegen Passwort-Raten: nach 8 Fehlversuchen 10 Minuten Pause (pro IP)
 const failed = new Map();
@@ -265,12 +289,24 @@ app.post('/api/games/:game/:action', handle((req) => {
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Nicht gefunden.' }));
 
+// Erst die gespeicherten Daten laden (Datei oder Datenbank), dann den Server starten
+ready.then(start, (e) => {
+  console.error('Daten konnten nicht geladen werden:', e.message);
+  process.exit(1);
+});
+
+function start() {
 const server = app.listen(PORT, HOST, () => {
   console.log('');
   console.log('  ==========================================');
   console.log('   Spass-Casino laeuft!');
   console.log(`   Im Browser oeffnen: ${URL}`);
-  if (ONLINE) {
+  console.log(`   Speicherort: ${db.storeName()}`);
+  if (CLOUD) {
+    console.log('');
+    console.log('   CLOUD-MODUS: Passwoerter sind Pflicht.');
+    console.log(`   Erlaubte Webseiten: ${[...ALLOWED_ORIGINS].join(', ') || '(keine)'}`);
+  } else if (ONLINE) {
     console.log('');
     console.log('   ONLINE-MODUS (GitHub Codespaces): Passwoerter sind Pflicht.');
     if (process.env.CODESPACE_NAME && process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
@@ -300,6 +336,16 @@ server.on('error', (e) => {
     throw e;
   }
 });
+
+// Beim Herunterfahren (z. B. Render legt den Server schlafen) erst fertig speichern
+const shutdown = async () => {
+  server.close();
+  try { await db.flush(); } catch { /* egal */ }
+  process.exit(0);
+};
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+}
 
 function openBrowser() {
   const { exec } = require('child_process');
