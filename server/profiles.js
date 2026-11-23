@@ -40,6 +40,8 @@ const GAME_NAMES = {
   rps: 'Schere-Stein-Papier',
   duel: 'Duelle (1 gegen 1)',
   livecrash: 'Live-Crash',
+  liveroulette: 'Live-Roulette',
+  jackpot: 'Jackpot',
   caseopen: 'Case öffnen',
   casebattle: 'Case Battles',
   admin: 'Admin',

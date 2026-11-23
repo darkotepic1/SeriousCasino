@@ -232,7 +232,38 @@ export async function admin(root, ctx) {
       </div>
       <p class="muted" style="margin:8px 0 0;font-size:.8rem">„Diese Runde“ geht nur, solange die Rakete noch unter dem Wert ist. 1,00 = sofortiger Absturz beim Start.</p>
     </div>
+    <div class="panel section lr-admin">
+      <h2>🎡 Live-Roulette & 💰 Jackpot steuern</h2>
+      <div class="lra-state muted"></div>
+      <div class="row" style="flex-wrap:wrap;margin-top:8px">
+        <span>Live-Roulette – nächste Zahl:</span><input class="input lra-num" type="number" min="0" max="36" style="max-width:90px">
+        <button class="btn btn-sm" data-lr="set">Vorgeben</button><button class="btn btn-sm btn-ghost" data-lr="clear">löschen</button>
+      </div>
+      <div class="row" style="flex-wrap:wrap;margin-top:8px">
+        <span>Jackpot – nächster Gewinner:</span><input class="input jpa-name" placeholder="Name" style="max-width:160px">
+        <button class="btn btn-sm" data-jp="set">Vorgeben</button><button class="btn btn-sm btn-ghost" data-jp="clear">löschen</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:.8rem">Der Jackpot-Gewinner muss in der Runde eingezahlt haben, sonst wird normal gezogen.</p>
+    </div>
     <div class="panel section"><h2>🟢 Gerade online</h2><div class="lca-online"></div></div>`);
+    const lraState = body.querySelector('.lra-state');
+    const lrLoop = async () => {
+      if (!alive || !body.contains(lraState)) return;
+      try {
+        const r = await adminApi('GET', '/api/admin/liveroulette');
+        const j = await adminApi('GET', '/api/admin/jackpot');
+        lraState.innerHTML = `Roulette: ${r.phase === 'betting' ? 'Wettphase' : r.phase === 'spinning' ? 'dreht' : 'Ergebnis'} · echte Zahl: <b class="gold">${r.realNumber ?? '–'}</b>${r.rigged ? ' (manipuliert)' : ''} · Vorgabe: ${r.nextRig ?? 'keine'} · ${r.players.length} Spieler<br>
+          Jackpot: Topf <b class="gold">${fmt(j.pot)}</b> · ${j.entries.map((e) => `${esc(e.name)} ${(e.chance * 100).toFixed(0)} %`).join(', ') || 'leer'} · Vorgabe: ${j.nextRig ? esc(j.nextRig) : 'keine'}`;
+      } catch { /* egal */ }
+      setTimeout(lrLoop, 1500);
+    };
+    lrLoop();
+    body.querySelectorAll('[data-lr]').forEach((b) => b.addEventListener('click', async () => {
+      try { await adminApi('POST', '/api/admin/liveroulette/rig', b.dataset.lr === 'clear' ? { clear: true } : { number: Number(body.querySelector('.lra-num').value) }); toast('Erledigt.', 'ok'); } catch (e) { toast(e.message, 'err'); }
+    }));
+    body.querySelectorAll('[data-jp]').forEach((b) => b.addEventListener('click', async () => {
+      try { await adminApi('POST', '/api/admin/jackpot/rig', b.dataset.jp === 'clear' ? { clear: true } : { name: body.querySelector('.jpa-name').value }); toast('Erledigt.', 'ok'); } catch (e) { toast(e.message, 'err'); }
+    }));
     const lcaState = body.querySelector('.lca-state');
     const lcaOnline = body.querySelector('.lca-online');
     const paintLc = (s) => {

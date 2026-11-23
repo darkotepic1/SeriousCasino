@@ -2,15 +2,15 @@
 import { h, fmt, sleep, celebrate } from '../ui.js';
 import { sfx } from '../sound.js';
 
-const ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+export const ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
-const color = (n) => (n === 0 ? 'green' : RED.has(n) ? 'red' : 'black');
+export const color = (n) => (n === 0 ? 'green' : RED.has(n) ? 'red' : 'black');
 const SEG = 360 / 37;
 const SPIN_MS = 5000;
 
 const short = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + 'M' : n >= 1e4 ? Math.round(n / 1000) + 'K' : n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'K' : String(n));
 
-function wheelSvg() {
+export function wheelSvg() {
   const cx = 150, cy = 150, ro = 142, ri = 98;
   const pt = (r, deg) => {
     const a = ((deg - 90) * Math.PI) / 180;

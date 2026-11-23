@@ -276,6 +276,10 @@ app.post('/api/admin/reset', adminRoute((b) => admin.resetProfile(b.name)));
 app.post('/api/admin/password', adminRoute((b) => admin.resetPassword(b.name, b.password)));
 app.post('/api/admin/delete', adminRoute((b) => admin.remove(b.name)));
 app.get('/api/admin/livecrash', adminRoute(() => livecrash.adminState()));
+app.get('/api/admin/liveroulette', adminRoute(() => require('./liveroulette').adminState()));
+app.post('/api/admin/liveroulette/rig', adminRoute((b) => require('./liveroulette').adminRig(b)));
+app.get('/api/admin/jackpot', adminRoute(() => require('./jackpot').adminState()));
+app.post('/api/admin/jackpot/rig', adminRoute((b) => require('./jackpot').adminRig(b)));
 app.post('/api/admin/livecrash/rig', adminRoute((b) => livecrash.adminRig(b)));
 app.get('/api/admin/online', adminRoute(() => ({ online: live.online() })));
 const adminControl = require('./admincontrol');
@@ -327,6 +331,20 @@ app.post('/api/live/crash/:action', handle((req) => {
   const p = me(req);
   live.touch(p, 'livecrash');
   return { ...livecrash[action](p, req.body || {}), balance: p.balance };
+}));
+
+// ---------- Live-Roulette & Jackpot (gemeinsame Runden) ----------
+const liveroulette = require('./liveroulette');
+const jackpot = require('./jackpot');
+const viewer = (req, where) => { try { const p = me(req); live.touch(p, where); return p; } catch { return null; } };
+app.get('/api/live/roulette/state', handle((req) => { const v = viewer(req, 'liveroulette'); return { ...liveroulette.state(v?.id), balance: v?.balance ?? null }; }));
+app.post('/api/live/roulette/bet', handle((req) => { const p = me(req); return { ...liveroulette.bet(p, req.body || {}), balance: p.balance }; }));
+app.get('/api/live/jackpot/state', handle((req) => { const v = viewer(req, 'jackpot'); return { ...jackpot.state(v?.id), balance: v?.balance ?? null }; }));
+app.post('/api/live/jackpot/:action', handle((req) => {
+  const p = me(req);
+  const a = req.params.action;
+  if (!['deposit', 'withdraw'].includes(a)) throw new GameError('Unbekannte Aktion.', 404);
+  return { ...jackpot[a](p, req.body || {}), balance: p.balance };
 }));
 
 // ---------- Cases & Case Battles ----------
@@ -405,6 +423,8 @@ ready.then(start, (e) => {
 
 function start() {
 livecrash.start();
+liveroulette.start();
+jackpot.start();
 const server = app.listen(PORT, HOST, () => {
   console.log('');
   console.log('  ==========================================');
