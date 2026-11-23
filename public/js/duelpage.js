@@ -7,6 +7,10 @@ const GAME_INFO = {
   math: { icon: '🧮', text: '30 Sekunden Kopfrechnen. Wer mehr Aufgaben richtig löst, gewinnt.' },
   connect4: { icon: '🔴', text: 'Abwechselnd Steine einwerfen – wer zuerst 4 in einer Reihe hat, gewinnt. 2 Minuten pro Zug.' },
   rps: { icon: '✌️', text: 'Schere, Stein, Papier – wer zuerst 3 Runden gewinnt. 2 Minuten pro Runde.' },
+  coinflip: { icon: '🪙', text: 'Sofort entschieden: Der Herausforderer hat Kopf, der Gegner Zahl.' },
+  dice: { icon: '🎲', text: 'Beide würfeln mit zwei Würfeln – die höhere Summe gewinnt. Bei Gleichstand wird neu gewürfelt.' },
+  clicker: { icon: '👆', text: '10 Sekunden so oft wie möglich klicken (oder tippen). Wer öfter klickt, gewinnt.' },
+  quiz: { icon: '🧠', text: '8 Wissensfragen, je 15 Sekunden. Mehr richtige Antworten gewinnen, bei Gleichstand die Schnelleren.' },
 };
 const RPS = { rock: '✊', paper: '✋', scissors: '✌️' };
 const RESULT = { win: ['🏆 Gewonnen', 'pos'], lose: ['Verloren', 'neg'], draw: ['Unentschieden', ''] };
@@ -286,6 +290,135 @@ export async function duel(root, ctx) {
     }));
   }
 
+  // ---------- Münzwurf-Duell ----------
+  async function renderCoin(d) {
+    if (local.coinShown) { stage.querySelector('.duel-extra').innerHTML = resultBanner(d); return; }
+    local.coinShown = true;
+    const v = d.view;
+    stage.innerHTML = `<div class="panel" style="text-align:center">
+      <p>Du hast <b>${v.mySide === 'heads' ? '👑 Kopf' : '⭐ Zahl'}</b>.</p>
+      <div class="coin-wrap" style="display:inline-block"><div class="coin"><div class="coin-face heads">👑</div><div class="coin-face tails">⭐</div></div></div>
+      <div class="duel-extra" style="margin-top:16px"></div></div>`;
+    const coin = stage.querySelector('.coin');
+    await sleep(100);
+    coin.style.transition = 'transform 2.2s cubic-bezier(.2,.7,.2,1)';
+    coin.style.transform = `rotateY(${360 * 6 + (v.result === 'heads' ? 0 : 180)}deg)`;
+    sfx.spin();
+    await sleep(2300);
+    if (alive) stage.querySelector('.duel-extra').innerHTML = resultBanner(d);
+  }
+
+  // ---------- Würfelduell ----------
+  async function renderDiceDuel(d) {
+    if (local.diceShown) return;
+    local.diceShown = true;
+    const { dieEl } = await import('./dice-face.js');
+    const v = d.view;
+    stage.innerHTML = `<div class="panel dd-box"><div class="dd-rows"></div><div class="duel-extra"></div></div>`;
+    const rows = stage.querySelector('.dd-rows');
+    for (const [i, r] of v.rolls.entries()) {
+      if (!alive) return;
+      const row = h(`<div class="dd-row"><div class="dd-side"><small>Du</small><div class="dd-dice"></div><b></b></div><span class="muted">${v.rolls.length > 1 ? `Wurf ${i + 1}` : 'vs'}</span><div class="dd-side"><small>Gegner</small><div class="dd-dice"></div><b></b></div></div>`);
+      rows.appendChild(row);
+      const [me, opp] = row.querySelectorAll('.dd-side');
+      for (let k = 0; k < 8; k++) {
+        me.querySelector('.dd-dice').replaceChildren(dieEl(1 + Math.floor(Math.random() * 6), 'rolling'), dieEl(1 + Math.floor(Math.random() * 6), 'rolling'));
+        opp.querySelector('.dd-dice').replaceChildren(dieEl(1 + Math.floor(Math.random() * 6), 'rolling'), dieEl(1 + Math.floor(Math.random() * 6), 'rolling'));
+        sfx.tick();
+        await sleep(80);
+      }
+      me.querySelector('.dd-dice').replaceChildren(...r.mine.map((x) => dieEl(x, 'landed')));
+      opp.querySelector('.dd-dice').replaceChildren(...r.opp.map((x) => dieEl(x, 'landed')));
+      me.querySelector('b').textContent = r.mine[0] + r.mine[1];
+      opp.querySelector('b').textContent = r.opp[0] + r.opp[1];
+      sfx.reelStop();
+      await sleep(700);
+    }
+    if (alive) stage.querySelector('.duel-extra').innerHTML = resultBanner(d);
+  }
+
+  // ---------- Speed-Klicker ----------
+  function renderClicker(d) {
+    const v = d.view;
+    if (local.clickRunning) return;
+    if (d.status === 'done' || v.submitted) {
+      stage.innerHTML = `<div class="panel">${resultBanner(d)}
+        <div class="kv"><span>Deine Klicks</span><span><b>${v.mine ?? '–'}</b></span></div>
+        ${v.opp !== null ? `<div class="kv"><span>Gegner</span><span><b>${v.opp}</b></span></div>` : `<p class="muted">${v.oppDone ? 'Auswertung …' : 'Warte auf deinen Gegner …'}</p>`}</div>`;
+      return;
+    }
+    if (stage.querySelector('.click-go')) return;
+    stage.innerHTML = `<div class="panel" style="text-align:center"><p>${esc(GAME_INFO.clicker.text)}</p>
+      <button class="react-pad idle click-go">Tippen zum Starten</button></div>`;
+    const pad = stage.querySelector('.click-go');
+    pad.addEventListener('click', async () => {
+      if (local.clickRunning) return;
+      local.clickRunning = true;
+      try { await act({ type: 'begin' }); } catch (e) { toast(e.message, 'err'); local.clickRunning = false; return; }
+      let n = 0;
+      const t0 = performance.now();
+      pad.className = 'react-pad go click-pad';
+      const onDown = (e) => { e.preventDefault(); n++; pad.querySelector('b').textContent = n; sfx.tick(); };
+      pad.innerHTML = '<b>0</b><small></small>';
+      pad.addEventListener('pointerdown', onDown);
+      while (alive && performance.now() - t0 < v.duration) {
+        pad.querySelector('small').textContent = `${((v.duration - (performance.now() - t0)) / 1000).toFixed(1)} s`;
+        await sleep(50);
+      }
+      pad.removeEventListener('pointerdown', onDown);
+      pad.className = 'react-pad idle';
+      pad.innerHTML = `<b>${n} Klicks!</b>`;
+      try { update(await act({ type: 'submit', clicks: n })); } catch (e) { toast(e.message, 'err'); }
+      local.clickRunning = false;
+    }, { once: true });
+  }
+
+  // ---------- Quiz ----------
+  function renderQuiz(d) {
+    const v = d.view;
+    if (d.status === 'done' || v.finished) {
+      if (local.quizDone === d.status) return;
+      local.quizDone = d.status;
+      stage.innerHTML = `<div class="panel">${resultBanner(d)}
+        <div class="kv"><span>Deine richtigen Antworten</span><span><b>${v.score} / ${v.total}</b></span></div>
+        ${v.oppScore !== null ? `<div class="kv"><span>Gegner</span><span><b>${v.oppScore} / ${v.total}</b></span></div>` : `<p class="muted">${v.oppFinished ? 'Auswertung …' : 'Warte auf deinen Gegner …'}</p>`}
+        ${v.review ? `<div class="quiz-review">${v.review.map((r, i) => `<div class="${r.ok ? 'pos' : 'neg'}">${i + 1}. ${esc(r.q)}<br><small>Richtig: <b>${esc(r.right)}</b>${r.ok ? '' : ` · deine Antwort: ${esc(r.mine)}`}</small></div>`).join('')}</div>` : ''}</div>`;
+      return;
+    }
+    if (!v.started) {
+      if (stage.querySelector('.quiz-go')) return;
+      stage.innerHTML = `<div class="panel" style="text-align:center"><p>${esc(GAME_INFO.quiz.text)}</p><button class="btn btn-gold btn-big quiz-go">QUIZ STARTEN</button></div>`;
+      stage.querySelector('.quiz-go').addEventListener('click', async () => { try { update(await act({ type: 'begin' })); } catch (e) { toast(e.message, 'err'); } });
+      return;
+    }
+    if (local.quizIndex === v.index && stage.querySelector('.quiz-q')) {
+      const bar = stage.querySelector('.quiz-timer > div');
+      if (bar) bar.style.width = `${(v.timeLeft / v.perQuestion) * 100}%`;
+      if (v.timeLeft <= 0 && !local.quizBusy) answer(-1, v.index); // Zeit abgelaufen
+      return;
+    }
+    local.quizIndex = v.index;
+    stage.innerHTML = `<div class="panel quiz-box">
+      <div class="row" style="justify-content:space-between"><span class="muted">Frage ${v.index + 1} / ${v.total}</span><span>Richtig: <b class="gold">${v.score}</b></span></div>
+      <div class="quiz-timer"><div style="width:${(v.timeLeft / v.perQuestion) * 100}%"></div></div>
+      <div class="quiz-q">${esc(v.question.q)}</div>
+      <div class="quiz-opts">${v.question.options.map((o, i) => `<button class="btn quiz-opt" data-c="${i}">${esc(o)}</button>`).join('')}</div></div>`;
+    stage.querySelectorAll('.quiz-opt').forEach((b) => b.addEventListener('click', () => answer(Number(b.dataset.c), v.index, b)));
+  }
+  async function answer(choice, index, btn) {
+    if (local.quizBusy) return;
+    local.quizBusy = true;
+    try {
+      const r = await act({ type: 'answer', index, choice });
+      if (btn) btn.classList.add(r.lastCorrect ? 'right' : 'wrong');
+      stage.querySelectorAll('.quiz-opt').forEach((b) => { b.disabled = true; if (b.textContent === r.rightAnswer) b.classList.add('right'); });
+      r.lastCorrect ? sfx.gem() : sfx.lose();
+      await sleep(900);
+      local.quizBusy = false;
+      update(r);
+    } catch (e) { toast(e.message, 'err'); local.quizBusy = false; }
+  }
+
   function update(d) {
     if (!alive || !d) return;
     const changed = JSON.stringify(d) !== JSON.stringify(last);
@@ -298,6 +431,10 @@ export async function duel(root, ctx) {
     else if (d.game === 'math') renderMath(d);
     else if (d.game === 'connect4') renderConnect4(d);
     else if (d.game === 'rps') renderRps(d);
+    else if (d.game === 'coinflip') { if (changed) renderCoin(d); }
+    else if (d.game === 'dice') { if (changed) renderDiceDuel(d); }
+    else if (d.game === 'clicker') renderClicker(d);
+    else if (d.game === 'quiz') renderQuiz(d);
   }
 
   async function poll() {

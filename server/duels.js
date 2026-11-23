@@ -5,14 +5,32 @@
 const crypto = require('crypto');
 const db = require('./db');
 const profiles = require('./profiles');
-const { randInt, GameError } = require('./util');
+const { randInt, shuffle, GameError } = require('./util');
 
 const GAMES = {
   reaction: 'Reaktionstest',
   math: 'Kopfrechnen',
   connect4: 'Vier gewinnt',
   rps: 'Schere-Stein-Papier (Best of 5)',
+  coinflip: 'Münzwurf-Duell',
+  dice: 'Würfelduell',
+  clicker: 'Speed-Klicker (10 s)',
+  quiz: 'Quiz (8 Fragen)',
 };
+const CLICK_MS = 10 * 1000;
+const MAX_CPS = 25; // mehr Klicks pro Sekunde schafft kein Mensch → gedeckelt
+const QUIZ_N = 8;
+const QUIZ_Q_MS = 15 * 1000;
+const QUESTIONS = require('./quiz-questions');
+
+function quizSet() {
+  const idx = shuffle([...QUESTIONS.keys()]).slice(0, QUIZ_N);
+  return idx.map((i) => {
+    const [q, right, ...wrong] = QUESTIONS[i];
+    const options = shuffle([right, ...wrong]);
+    return { q, options, answer: options.indexOf(right) };
+  });
+}
 const PENDING_MS = 15 * 60 * 1000; // Herausforderung verfällt
 const TURN_MS = 2 * 60 * 1000; // Zugzeit bei Vier gewinnt / Rundenzeit bei SSP
 const SOLO_MS = 10 * 60 * 1000; // Reaktion/Kopfrechnen: so lange darf der zweite Spieler sich Zeit lassen
@@ -54,6 +72,19 @@ function initState(game, d) {
   if (game === 'math') return { problems: genProblems(), start: {}, score: {}, idx: {} };
   if (game === 'connect4') return { board: new Array(42).fill(0), turn: randInt(0, 2) ? d.from : d.to, lastMove: now, moves: 0, winLine: null };
   if (game === 'rps') return { picks: {}, score: { [d.from]: 0, [d.to]: 0 }, history: [], roundStart: now };
+  if (game === 'coinflip') return { result: randInt(0, 2) ? 'heads' : 'tails' }; // Herausforderer hat immer Kopf
+  if (game === 'dice') {
+    const rolls = [];
+    for (let i = 0; i < 20; i++) {
+      const r = { [d.from]: [randInt(1, 7), randInt(1, 7)], [d.to]: [randInt(1, 7), randInt(1, 7)] };
+      rolls.push(r);
+      const sum = (a) => a[0] + a[1];
+      if (sum(r[d.from]) !== sum(r[d.to])) break; // Gleichstand → nochmal würfeln
+    }
+    return { rolls };
+  }
+  if (game === 'clicker') return { start: {}, clicks: {} };
+  if (game === 'quiz') return { qs: quizSet(), start: {}, qStart: {}, answers: {} };
   throw new GameError('Unbekanntes Duell.');
 }
 
@@ -118,6 +149,42 @@ function tick(d, now = Date.now()) {
       if (picked.length === 1) finish(d, picked[0], 'Zeit abgelaufen');
       else finish(d, null, 'Zeit abgelaufen');
     }
+  } else if (d.game === 'clicker') {
+    // Wer gestartet hat, aber nichts abgeschickt hat (Seite geschlossen), bekommt 0 Klicks
+    for (const pid of players) if (s.start[pid] && s.clicks[pid] === undefined && now > s.start[pid] + CLICK_MS + 15000) s.clicks[pid] = 0;
+    const done = players.filter((pid) => s.clicks[pid] !== undefined);
+    if (done.length === 2) {
+      const [a, b] = players.map((pid) => s.clicks[pid]);
+      finish(d, a === b ? null : a > b ? d.from : d.to, `${nameOf(d.from)} ${a} : ${b} ${nameOf(d.to)} Klicks`);
+    } else if (done.length === 1 && now - (s.start[done[0]] + CLICK_MS) > SOLO_MS) finish(d, done[0], 'Gegner nicht angetreten');
+    else if (!done.length && !players.some((pid) => s.start[pid]) && now - d.startedAt > 2 * SOLO_MS) finish(d, null, 'niemand hat gespielt');
+  } else if (d.game === 'quiz') {
+    const fin = (pid) => s.start[pid] && ((s.answers[pid] || []).length >= QUIZ_N || now > s.start[pid] + QUIZ_N * (QUIZ_Q_MS + 1000) + 5000);
+    const score = (pid) => (s.answers[pid] || []).filter((x) => x.correct).length;
+    const time = (pid) => (s.answers[pid] || []).reduce((a, x) => a + x.ms, 0);
+    if (players.every(fin)) {
+      const [a, b] = players.map(score);
+      let w = a === b ? null : a > b ? d.from : d.to;
+      let why = `${nameOf(d.from)} ${a} : ${b} ${nameOf(d.to)} richtig`;
+      if (!w && a > 0) { const [ta, tb] = players.map(time); if (ta !== tb) { w = ta < tb ? d.from : d.to; why += ' – schneller entschieden'; } }
+      finish(d, w, why);
+    } else {
+      const started = players.filter((pid) => s.start[pid]);
+      if (started.length === 1 && fin(started[0]) && now - s.start[started[0]] > SOLO_MS) finish(d, started[0], 'Gegner nicht angetreten');
+      else if (!started.length && now - d.startedAt > 2 * SOLO_MS) finish(d, null, 'niemand hat gespielt');
+    }
+  }
+}
+
+/** Münzwurf- und Würfelduell werden sofort beim Annehmen entschieden */
+function instantResolve(d) {
+  const s = d.state;
+  if (d.game === 'coinflip') {
+    finish(d, s.result === 'heads' ? d.from : d.to, `Münze zeigt ${s.result === 'heads' ? 'Kopf' : 'Zahl'}`);
+  } else if (d.game === 'dice') {
+    const last = s.rolls[s.rolls.length - 1];
+    const a = last[d.from][0] + last[d.from][1], b = last[d.to][0] + last[d.to][1];
+    finish(d, a === b ? null : a > b ? d.from : d.to, `${nameOf(d.from)} ${a} : ${b} ${nameOf(d.to)}`);
   }
 }
 
@@ -172,6 +239,32 @@ function gameView(d, me) {
       timeLeft: done ? 0 : Math.max(0, s.roundStart + TURN_MS - now),
     };
   }
+  if (d.game === 'coinflip') return { result: s.result, mySide: d.from === me ? 'heads' : 'tails' };
+  if (d.game === 'dice') return { rolls: s.rolls.map((r) => ({ mine: r[me], opp: r[opp] })) };
+  if (d.game === 'clicker') {
+    const started = !!s.start[me];
+    return {
+      duration: CLICK_MS, started, submitted: s.clicks[me] !== undefined, mine: s.clicks[me] ?? null,
+      timeLeft: started ? Math.max(0, s.start[me] + CLICK_MS - now) : CLICK_MS,
+      oppDone: s.clicks[opp] !== undefined, opp: done ? s.clicks[opp] ?? null : null,
+    };
+  }
+  if (d.game === 'quiz') {
+    const mine = s.answers[me] || [];
+    const started = !!s.start[me];
+    const finished = mine.length >= QUIZ_N || (started && now > s.start[me] + QUIZ_N * (QUIZ_Q_MS + 1000) + 5000);
+    const cur = !finished && started ? s.qs[mine.length] : null;
+    return {
+      total: QUIZ_N, perQuestion: QUIZ_Q_MS, started, finished, index: mine.length,
+      question: cur ? { q: cur.q, options: cur.options } : null,
+      timeLeft: cur ? Math.max(0, s.qStart[me] + QUIZ_Q_MS - now) : 0,
+      score: mine.filter((x) => x.correct).length,
+      oppStarted: !!s.start[opp], oppFinished: (s.answers[opp] || []).length >= QUIZ_N,
+      oppScore: done ? (s.answers[opp] || []).filter((x) => x.correct).length : null,
+      // Auflösung erst nach Spielende (sonst könnte man dem Gegner die Antworten verraten)
+      review: done ? s.qs.map((q, i) => ({ q: q.q, right: q.options[q.answer], mine: mine[i] ? q.options[mine[i].choice] ?? '–' : '–', ok: !!mine[i]?.correct })) : null,
+    };
+  }
   return {};
 }
 
@@ -207,7 +300,9 @@ function count(p) {
     (d.game === 'connect4' && d.state.turn === p.id) ||
     (d.game === 'rps' && !d.state.picks[p.id]) ||
     (d.game === 'reaction' && !d.state.res[p.id]) ||
-    (d.game === 'math' && !d.state.start[p.id])));
+    (d.game === 'math' && !d.state.start[p.id]) ||
+    (d.game === 'clicker' && d.state.clicks[p.id] === undefined) ||
+    (d.game === 'quiz' && (d.state.answers[p.id] || []).length < QUIZ_N)));
   return { incoming: incoming.map((d) => ({ id: d.id, from: nameOf(d.from), gameName: GAMES[d.game], stake: d.stake })), waiting: myTurn.length };
 }
 
@@ -246,6 +341,7 @@ function accept(p, body) {
   d.status = 'active';
   d.startedAt = Date.now();
   d.state = initState(d.game, d);
+  instantResolve(d);
   return summary(d, p.id);
 }
 
@@ -337,6 +433,31 @@ function act(p, body) {
         finish(d, s.score[d.from] >= 3 ? d.from : d.to, `${nameOf(d.from)} ${s.score[d.from]} : ${s.score[d.to]} ${nameOf(d.to)}`);
       }
     }
+  } else if (d.game === 'clicker' && type === 'begin') {
+    if (!s.start[me]) s.start[me] = now;
+  } else if (d.game === 'clicker' && type === 'submit') {
+    if (!s.start[me]) throw new GameError('Erst starten.');
+    if (s.clicks[me] !== undefined) throw new GameError('Schon abgeschickt.');
+    if (now < s.start[me] + CLICK_MS - 1500) throw new GameError('Die 10 Sekunden sind noch nicht um.');
+    const n = Math.max(0, Math.floor(Number(body.clicks) || 0));
+    s.clicks[me] = Math.min(n, (MAX_CPS * CLICK_MS) / 1000);
+    tick(d);
+  } else if (d.game === 'quiz' && type === 'begin') {
+    if (!s.start[me]) { s.start[me] = now; s.qStart[me] = now; s.answers[me] = []; }
+  } else if (d.game === 'quiz' && type === 'answer') {
+    if (!s.start[me]) throw new GameError('Erst starten.');
+    const list = s.answers[me];
+    if (list.length >= QUIZ_N) throw new GameError('Schon fertig.');
+    if (Number(body.index) !== list.length) throw new GameError('Falsche Frage.');
+    const q = s.qs[list.length];
+    const ms = now - s.qStart[me];
+    const choice = Number(body.choice);
+    // Zu spät oder keine Antwort = falsch
+    const correct = ms <= QUIZ_Q_MS + 1000 && choice === q.answer;
+    list.push({ choice: Number.isInteger(choice) ? choice : -1, correct, ms: Math.min(ms, QUIZ_Q_MS + 1000) });
+    s.qStart[me] = now;
+    tick(d);
+    return { ...get(p, { id: d.id }), lastCorrect: correct, rightAnswer: q.options[q.answer] };
   } else {
     throw new GameError('Unbekannter Zug.');
   }
