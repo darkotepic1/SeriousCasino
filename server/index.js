@@ -347,6 +347,13 @@ app.post('/api/live/jackpot/:action', handle((req) => {
   return { ...jackpot[a](p, req.body || {}), balance: p.balance };
 }));
 
+// ---------- Push-Benachrichtigungen ----------
+const push = require('./push');
+app.get('/api/push/key', handle(() => push.publicKey()));
+app.post('/api/push/subscribe', handle((req) => push.subscribe(me(req), req.body?.subscription)));
+app.post('/api/push/unsubscribe', handle((req) => push.unsubscribe(me(req), req.body?.endpoint)));
+app.post('/api/push/test', handle((req) => { const p = me(req); push.send(p, 'Spaß-Casino', '🔔 Benachrichtigungen funktionieren!', '#/settings', true); return { ok: true, devices: (p.push || []).length }; }));
+
 // ---------- Multiplayer-Tische: Blackjack & Texas Hold'em ----------
 const bjtable = require('./bjtable');
 app.get('/api/table/blackjack', handle((req) => { const v = viewer(req, 'bjtable'); return { ...bjtable.view(v?.id), balance: v?.balance ?? null }; }));

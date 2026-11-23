@@ -45,10 +45,14 @@ Jeder, der es so herunterlädt, hat sein **eigenes** Casino mit eigenen Profilen
 
 Jedes Profil (nur ein Name, kein Passwort) hat sein eigenes Guthaben. Profil wechseln: oben rechts auf den Namen/Buchstaben klicken.
 
-## 🟢 Live, Live-Crash & 📦 Case Battles
+## 🟢 Live- & Multiplayer-Spiele
 
 - **Live** (Menü): wer gerade online ist und in welchem Spiel – mit „Dazu“-Knopf – plus ein Feed mit großen Gewinnen (ab 10× Einsatz und 1.000 Chips).
 - **Live-Crash**: eine gemeinsame Rakete für alle. 8 Sekunden Wettphase, dann steigt sie – alle sehen live, wer setzt und wer aussteigt.
+- **Live-Roulette**: ein Rad für alle. 15 Sekunden setzen (auch mehrmals nachlegen), dann dreht sich die Kugel für alle gleichzeitig.
+- **Jackpot**: Alle zahlen in einen Topf. Ab 2 Spielern läuft ein 30-Sekunden-Countdown, dann zieht das Rad den Gewinner – je mehr du eingezahlt hast, desto größer deine Chance auf den ganzen Topf.
+- **Blackjack-Tisch**: bis zu 5 Spieler gegen denselben Dealer. Nach dem ersten Einsatz 15 Sekunden Wettphase, dann ist jeder der Reihe nach dran (20 Sekunden, sonst wird automatisch gehalten). Blackjack zahlt 3:2.
+- **Texas Hold'em**: echtes Poker gegeneinander, bis zu 6 am Tisch. Du kaufst dich mit 1.000–20.000 Chips ein, Blinds 25/50, No-Limit. Ab 2 Spielern geht's los; 25 Sekunden pro Zug. Beim Aufstehen gehen deine Tisch-Chips zurück aufs Konto. Das Casino nimmt nichts.
 - **Cases** (Menü): Cases öffnen oder **Case Battles** mit 2–4 Spielern. Alle öffnen dieselben Cases, der höchste Gesamtwert gewinnt alle Skins (als Chips). Leere Plätze lassen sich mit Bots füllen (gewinnt ein Bot, geht der Topf ans Haus). Die Skins sind frei erfunden; Auszahlungsquote ≈ 92 %.
 - **Admin**: Im Admin-Bereich siehst du, wer online ist, und kannst Live-Crash steuern („Jetzt crashen“, „Diese/nächste Runde crasht bei …“). Die Spieler sehen davon nichts.
 
@@ -63,11 +67,22 @@ Beide setzen gleich viel (ab 10 Chips), der Gewinner bekommt den **ganzen Topf**
 | 🧮 Kopfrechnen | 30 Sekunden lang Aufgaben lösen – wer mehr richtig hat, gewinnt. |
 | 🔴 Vier gewinnt | Abwechselnd Steine einwerfen, wer zuerst 4 in einer Reihe hat, gewinnt. 2 Minuten pro Zug. |
 | ✌️ Schere-Stein-Papier | Best of 5 – wer zuerst 3 Runden gewinnt. 2 Minuten pro Runde. |
+| 🪙 Münzwurf | Kopf oder Zahl – sofort entschieden, 50 : 50. |
+| 🎲 Würfelduell | Beide würfeln mit zwei Würfeln, die höhere Summe gewinnt (bei Gleichstand nochmal). |
+| 👆 Speed-Klicker | 10 Sekunden so schnell wie möglich klicken. |
+| ❓ Quiz | 8 Wissensfragen, je 15 Sekunden – mehr richtige Antworten gewinnen. |
 
 - Neue Herausforderungen erscheinen als Hinweis und als Zahl am Menüpunkt **Duelle**.
 - Unbeantwortete Herausforderungen verfallen nach 15 Minuten, Ablehnen/Zurückziehen gibt den Einsatz zurück.
 - Wer nicht weiterspielt, verliert nach Ablauf der Zeit. Unentschieden = Einsatz zurück.
 - Reaktionstest und Kopfrechnen spielt jeder für sich (nacheinander oder gleichzeitig); der Zweite hat dafür bis zu 10 Minuten Zeit.
+
+## ⭐ Stufen, Aufgaben, Chat & Benachrichtigungen
+
+- **VIP & Aufgaben** (Menü): Mit jedem Einsatz sammelst du Erfahrung und steigst Stufen auf (Bronze bis Legende) – jeder Aufstieg bringt Chips. Dazu gibt es täglich neue Aufgaben und Erfolge mit Belohnungen.
+- **Rangliste**: gesamt und als **Wochen-Rangliste** (die besten 3 der Woche bekommen 25.000 / 10.000 / 5.000 Chips). Über die Rangliste kannst du anderen Chips **schenken**.
+- **Chat**: Sprechblase oben rechts – ein gemeinsamer Chat für alle.
+- **Benachrichtigungen** (Einstellungen → 🔔): Bekomme eine Meldung aufs Handy oder den PC, wenn dich jemand zum Duell herausfordert, deine Herausforderung angenommen wird oder dir jemand Chips schenkt – auch wenn das Casino zu ist. Funktioniert im Browser am PC und unter Android direkt; auf dem **iPhone** musst du das Casino zuerst über *Teilen → Zum Home-Bildschirm* hinzufügen und von dort öffnen. Im Heimnetz-Modus (ohne https) geht es leider nicht.
 
 ## 🛠️ Admin-Bereich (Chips verteilen)
 

@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.." || exit 1
 
 # Bereits laufenden Server nicht doppelt starten
 if ! pgrep -f "node server/index.js --online" > /dev/null; then
-  [ -d node_modules/express ] || npm ci --omit=dev
+  [ -d node_modules/web-push ] || npm ci --omit=dev
   setsid nohup node server/index.js --online > /tmp/casino.log 2>&1 < /dev/null &
 fi
 

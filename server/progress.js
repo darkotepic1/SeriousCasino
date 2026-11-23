@@ -136,6 +136,8 @@ function weeklyBoard() {
 // ---------- Hinweise an den Spieler ----------
 function notice(p, n) {
   p.notices = [...(p.notices || []), { ...n, at: Date.now() }].slice(-20);
+  // Wichtige Hinweise zusätzlich als Push aufs Handy/den PC
+  if (n.type === 'tip' || n.type === 'weekly') require('./push').send(p, 'Spaß-Casino', n.text, n.type === 'weekly' ? '#/leaderboard' : '#/');
 }
 function takeNotices(p) {
   const n = p.notices || [];

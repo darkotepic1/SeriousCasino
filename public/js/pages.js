@@ -6,6 +6,7 @@ export { live, cases, battle } from './livepage.js';
 export { vip } from './vippage.js';
 import { sfx } from './sound.js';
 import { session } from './api.js';
+import { pushStatus, enablePush, disablePush } from './push.js';
 
 const signCls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
 
@@ -264,6 +265,12 @@ export function settings(root, ctx) {
         <p class="muted">Sound-Effekte bei Drehen, Karten, Gewinnen usw.</p>
         <button class="btn" id="sndBtn"></button>
       </div>
+      <div class="panel push-box">
+        <h2>🔔 Benachrichtigungen</h2>
+        <p class="muted">Bekomme eine Meldung aufs Handy oder den PC, wenn dich jemand zum Duell herausfordert, deine Herausforderung angenommen wird oder dir jemand Chips schenkt – auch wenn das Casino gerade zu ist.</p>
+        <p class="push-state"></p>
+        <div class="row" style="flex-wrap:wrap"><button class="btn btn-gold push-on hidden">Aktivieren</button><button class="btn push-test hidden">Test senden</button><button class="btn btn-ghost push-off hidden">Ausschalten</button></div>
+      </div>
       <div class="panel">
         <h2>Profil</h2>
         <form class="row" id="renameForm">
@@ -302,6 +309,35 @@ export function settings(root, ctx) {
     </div></div>`);
   root.appendChild(el);
   fillInvite(el.querySelector('.invite-box'), ctx);
+
+  // Push-Benachrichtigungen
+  const pb = el.querySelector('.push-box');
+  const pState = pb.querySelector('.push-state');
+  async function paintPush() {
+    const s = await pushStatus().catch(() => 'unsupported');
+    pState.innerHTML = {
+      on: '<span class="pos">✅ Auf diesem Gerät aktiv.</span>',
+      off: 'Auf diesem Gerät ausgeschaltet.',
+      denied: '<span class="neg">Im Browser blockiert.</span> Erlaube Benachrichtigungen in den Website-Einstellungen (Schloss-Symbol neben der Adresse) und lade die Seite neu.',
+      'ios-install': '📱 Auf dem iPhone: Tippe unten auf <b>Teilen</b> → <b>Zum Home-Bildschirm</b>, öffne das Casino über das neue Symbol und aktiviere es dann hier.',
+      unsupported: 'Dieser Browser bzw. diese Verbindung unterstützt keine Benachrichtigungen (im Heimnetz ohne https leider nicht möglich).',
+    }[s];
+    pb.querySelector('.push-on').classList.toggle('hidden', s !== 'off');
+    pb.querySelector('.push-test').classList.toggle('hidden', s !== 'on');
+    pb.querySelector('.push-off').classList.toggle('hidden', s !== 'on');
+  }
+  paintPush();
+  pb.querySelector('.push-on').addEventListener('click', async () => {
+    try { await enablePush(); toast('Benachrichtigungen aktiviert!', 'ok'); } catch (err) { toast(err.message, 'err'); }
+    paintPush();
+  });
+  pb.querySelector('.push-test').addEventListener('click', async () => {
+    try { await ctx.post('/api/push/test'); toast('Test gesendet – die Meldung sollte gleich erscheinen.', 'ok'); } catch (err) { toast(err.message, 'err'); }
+  });
+  pb.querySelector('.push-off').addEventListener('click', async () => {
+    try { await disablePush(); toast('Benachrichtigungen ausgeschaltet.', 'ok'); } catch (err) { toast(err.message, 'err'); }
+    paintPush();
+  });
 
   const snd = el.querySelector('#sndBtn');
   const paint = () => (snd.textContent = sfx.enabled ? '🔊 Sound ist AN – ausschalten' : '🔇 Sound ist AUS – einschalten');

@@ -5,6 +5,7 @@ import { h, esc, fmt, toast, modal, betControl, confetti } from './ui.js';
 import * as pages from './pages.js';
 import { betsPanel } from './bets.js';
 import { initChat } from './chatui.js';
+import { resyncPush } from './push.js';
 
 export const CATS = [
   { id: 'live', name: 'Live & Multiplayer', icon: '🟢' },
@@ -101,6 +102,7 @@ export function setBalance(n) {
 }
 
 // ---------- Profil ----------
+let pushSyncedFor = null;
 async function loadMe() {
   if (!session.token) return null;
   try {
@@ -108,6 +110,7 @@ async function loadMe() {
     document.getElementById('profileName').textContent = state.me.name;
     document.getElementById('profileAvatar').textContent = state.me.name.slice(0, 1).toUpperCase();
     setBalance(state.me.balance);
+    if (pushSyncedFor !== state.me.name) { pushSyncedFor = state.me.name; resyncPush(); }
     return state.me;
   } catch (e) {
     if (e.status === 401) { session.set(''); state.me = null; return null; }

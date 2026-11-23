@@ -326,6 +326,7 @@ function create(p, body) {
   p.balance -= stake;
   const d = { id: crypto.randomUUID(), game, stake, from: p.id, to, accepted: false, status: 'pending', createdAt: Date.now() };
   store()[d.id] = d;
+  if (to) require('./push').send(profiles.all().find((x) => x.id === to), '⚔️ Neue Herausforderung', `${p.name} fordert dich zu ${GAMES[game]} heraus – Einsatz ${stake.toLocaleString('de-DE')} Chips`, '#/duels');
   return summary(d, p.id);
 }
 
@@ -342,6 +343,8 @@ function accept(p, body) {
   d.startedAt = Date.now();
   d.state = initState(d.game, d);
   instantResolve(d);
+  const from = profiles.all().find((x) => x.id === d.from);
+  require('./push').send(from, '⚔️ Duell angenommen', `${p.name} hat deine Herausforderung (${GAMES[d.game]}) angenommen!`, '#/duels');
   return summary(d, p.id);
 }
 
