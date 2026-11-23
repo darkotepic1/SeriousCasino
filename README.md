@@ -45,6 +45,13 @@ Jeder, der es so herunterlädt, hat sein **eigenes** Casino mit eigenen Profilen
 
 Jedes Profil (nur ein Name, kein Passwort) hat sein eigenes Guthaben. Profil wechseln: oben rechts auf den Namen/Buchstaben klicken.
 
+## 🟢 Live, Live-Crash & 📦 Case Battles
+
+- **Live** (Menü): wer gerade online ist und in welchem Spiel – mit „Dazu“-Knopf – plus ein Feed mit großen Gewinnen (ab 10× Einsatz und 1.000 Chips).
+- **Live-Crash**: eine gemeinsame Rakete für alle. 8 Sekunden Wettphase, dann steigt sie – alle sehen live, wer setzt und wer aussteigt.
+- **Cases** (Menü): Cases öffnen oder **Case Battles** mit 2–4 Spielern. Alle öffnen dieselben Cases, der höchste Gesamtwert gewinnt alle Skins (als Chips). Leere Plätze lassen sich mit Bots füllen (gewinnt ein Bot, geht der Topf ans Haus). Die Skins sind frei erfunden; Auszahlungsquote ≈ 92 %.
+- **Admin**: Im Admin-Bereich siehst du, wer online ist, und kannst Live-Crash steuern („Jetzt crashen“, „Diese/nächste Runde crasht bei …“). Die Spieler sehen davon nichts.
+
 ## ⚔️ Duelle – 1 gegen 1
 
 Im Menü **Duelle** forderst du andere Spieler heraus – oder schreibst ein offenes Duell aus, das jeder annehmen darf.
