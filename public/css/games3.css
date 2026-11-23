@@ -1,0 +1,135 @@
+/* Styles für die 10 Spiele der dritten Runde */
+
+/* ---------- Würfel ---------- */
+.die { width: 64px; height: 64px; border-radius: 14px; background: linear-gradient(145deg, #ffffff, #dfe3e6); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .15), 0 6px 14px rgba(0, 0, 0, .45); display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 9px; gap: 2px; }
+.die i { border-radius: 50%; }
+.die i.on { background: radial-gradient(circle at 35% 35%, #444, #111); }
+.die.rolling { animation: dieRoll .14s linear infinite; }
+.die.landed { animation: pop .3s; }
+@keyframes dieRoll { 50% { transform: rotate(14deg) translateY(-4px); } }
+
+/* ---------- Chip-Felder (gemeinsam) ---------- */
+.ct-spot { position: relative; border: 1px solid rgba(255, 255, 255, .35); background: rgba(0, 0, 0, .18); color: #fff; border-radius: 10px; cursor: pointer; padding: 10px 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; transition: background .15s, transform .1s; min-height: 54px; }
+.ct-spot:hover { background: rgba(255, 255, 255, .1); }
+.ct-spot:active { transform: scale(.98); }
+.ct-spot b { font-size: .85rem; letter-spacing: .5px; }
+.ct-spot small { font-size: .7rem; opacity: .75; text-align: center; }
+.ct-spot.ct-locked { cursor: not-allowed; }
+.ct-spot.ct-hit { box-shadow: 0 0 0 3px var(--gold2), 0 0 18px var(--gold); z-index: 1; }
+.ct-chip { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; min-width: 30px; height: 30px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; font-size: .68rem; font-weight: 900; color: #2a1d00; background: radial-gradient(circle, var(--gold2) 0 55%, var(--gold) 56% 100%); border: 3px dashed #fff8; box-shadow: 0 2px 6px rgba(0, 0, 0, .6); animation: pop .2s; }
+
+/* ---------- Craps ---------- */
+.craps-table { display: flex; flex-direction: column; gap: 14px; }
+.craps-top { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+.craps-dice, .sb-dice { display: flex; gap: 14px; justify-content: center; min-height: 70px; }
+.craps-info { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.craps-point { font-weight: 900; letter-spacing: 2px; padding: 6px 14px; border-radius: 999px; background: rgba(0, 0, 0, .4); border: 2px solid rgba(255, 255, 255, .3); }
+.craps-point.on { background: #fff; color: #111; border-color: var(--gold); }
+.craps-history { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; max-width: 260px; }
+.craps-history span { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: .75rem; font-weight: 800; background: rgba(0, 0, 0, .35); }
+.craps-history span.seven { background: #b3242b; }
+.craps-spots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-field { grid-column: 1 / -1; border-color: var(--gold); }
+.cs-pass { border-color: #7dffb3; }
+.cs-dont { border-color: #ff8a8d; }
+
+/* ---------- Sic Bo ---------- */
+.sb-table { display: flex; flex-direction: column; gap: 12px; }
+.sb-board { display: flex; flex-direction: column; gap: 6px; overflow-x: auto; }
+.sb-row { display: grid; gap: 5px; min-width: 520px; }
+.sb-main { grid-template-columns: repeat(5, 1fr); }
+.sb-totals { grid-template-columns: repeat(14, 1fr); }
+.sb-totals .ct-spot { padding: 6px 2px; min-height: 48px; }
+.sb-six { grid-template-columns: repeat(6, 1fr); }
+.sb-label { font-size: .72rem; color: rgba(246, 215, 122, .7); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+.sb-mini { display: inline-block; }
+.sb-mini .die { width: 20px; height: 20px; padding: 3px; border-radius: 5px; gap: 1px; box-shadow: none; }
+.sb-six .ct-spot { flex-direction: row; gap: 2px; }
+
+/* ---------- Drei-Karten-Poker / Kartenkrieg / Red Dog ---------- */
+.tc-table, .war-table, .rd-table { min-height: 380px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; align-items: center; }
+.tc-actions, .war-actions, .rd-actions { display: flex; flex-direction: column; gap: 8px; }
+.tc-pay td, .rd-pay td { padding: 4px 8px; }
+.war-table { justify-content: center; }
+.war-side { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.war-vs { font-weight: 900; font-size: 1.4rem; color: var(--gold2); letter-spacing: 3px; }
+.war-table .bj-cards .card + .card { margin-left: 16px; }
+.rd-table { justify-content: center; }
+.rd-cards { display: flex; gap: 18px; align-items: center; }
+.rd-slot { display: flex; }
+.rd-empty { width: var(--cw, 78px); height: calc(var(--cw, 78px) * 1.4); border-radius: 9px; border: 2px dashed rgba(255, 255, 255, .35); display: grid; place-items: center; font-size: 2rem; font-weight: 900; color: rgba(255, 255, 255, .4); }
+.rd-gap { font-weight: 800; color: var(--gold2); min-height: 1.4em; }
+
+/* ---------- Drache & Tiger ---------- */
+.dt-table { display: flex; flex-direction: column; gap: 14px; }
+.dt-hands { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dt-hand { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; border: 2px solid transparent; transition: .2s; }
+.dt-hand.win { border-color: var(--gold); background: rgba(0, 0, 0, .2); box-shadow: 0 0 24px rgba(227, 179, 65, .35); }
+.dt-name { font-weight: 900; letter-spacing: 2px; font-size: 1.1rem; }
+.dt-dragon { border-color: #ff6b6b; } .dt-tiger { border-color: #4dabf7; } .dt-tie { border-color: var(--green); }
+
+/* ---------- Pferderennen ---------- */
+.hr-list { display: flex; flex-direction: column; gap: 6px; }
+.hr-pick { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #08140e; border: 1px solid var(--line); cursor: pointer; text-align: left; }
+.hr-pick:hover { border-color: var(--gold-dark); }
+.hr-pick.on { border-color: var(--gold); background: rgba(227, 179, 65, .12); }
+.hr-no, .hr-lane-no { width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; font-weight: 900; font-size: .8rem; color: #fff; flex: none; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+.hr-name { flex: 1; font-weight: 700; }
+.hr-odds { font-weight: 900; color: var(--gold2); font-variant-numeric: tabular-nums; }
+.hr-track { position: relative; border-radius: 18px; padding: 12px 12px 12px 10px; background: repeating-linear-gradient(90deg, #2f5a2a 0 60px, #2a5225 60px 120px); border: 6px solid #6b4a1a; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.hr-lane { position: relative; height: 46px; display: flex; align-items: center; border-bottom: 2px dashed rgba(255, 255, 255, .25); padding-left: 34px; }
+.hr-lane.mine { background: rgba(227, 179, 65, .14); border-radius: 8px; }
+.hr-lane-no { position: absolute; left: 0; }
+.hr-runner { position: absolute; left: 34px; transition: none; }
+.hr-lane .hr-runner { left: 0; margin-left: 34px; }
+.hr-horse { font-family: var(--emoji); font-size: 2rem; display: inline-block; transform: scaleX(-1); filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .5)); }
+.hr-runner.winner .hr-horse { animation: symWin .8s ease-in-out 4; }
+.hr-finish { position: absolute; right: 18px; top: 0; bottom: 0; width: 8px; background: repeating-linear-gradient(0deg, #fff 0 8px, #111 8px 16px); opacity: .85; }
+
+/* ---------- Bingo ---------- */
+.bg-card { max-width: 420px; width: 100%; margin: 0 auto; padding: 14px; border-radius: 18px; background: linear-gradient(160deg, #1b4f8a, #0c2547); border: 3px solid var(--gold); box-shadow: var(--shadow); }
+.bg-head, .bg-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.bg-head span { text-align: center; font-weight: 900; font-size: 1.6rem; color: var(--gold2); text-shadow: 0 2px 6px rgba(0, 0, 0, .5); }
+.bg-grid { margin-top: 6px; }
+.bg-cell { aspect-ratio: 1; border-radius: 10px; background: #fff; color: #10223d; display: grid; place-items: center; font-weight: 900; font-size: clamp(1rem, 3.6vw, 1.35rem); position: relative; }
+.bg-cell.marked { background: radial-gradient(circle, #ff6b9a 0 42%, #fff 43%); color: #fff; }
+.bg-cell.free { background: radial-gradient(circle, var(--gold2) 0 45%, #fff 46%); color: #6b4a00; }
+.bg-cell.pop { animation: pop .3s; }
+.bg-cell.line { box-shadow: 0 0 0 3px var(--gold), 0 0 14px var(--gold); }
+.bg-balls { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 14px; min-height: 30px; }
+.bg-ball { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: .72rem; font-weight: 900; color: #fff; animation: pop .25s; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .25); }
+.b-B { background: #3b82f6; } .b-I { background: #e5484d; } .b-N { background: #9ca3af; } .b-G { background: #2ecc71; } .b-O { background: #f59e0b; }
+.bg-pay td { padding: 4px 8px; }
+
+/* ---------- Hütchenspiel ---------- */
+.cup-table { min-height: 260px; display: grid; place-items: center; }
+.cup-row { display: flex; gap: clamp(10px, 4vw, 34px); justify-content: center; }
+.cup-slot { position: relative; width: clamp(60px, 15vw, 96px); height: 130px; display: flex; align-items: flex-end; justify-content: center; transition: transform .22s ease-in-out; }
+.cup { font-family: var(--emoji); font-size: clamp(3.4rem, 11vw, 5rem); line-height: 1; position: relative; z-index: 2; transition: transform .35s ease; transform: rotate(180deg); filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .5)); }
+.cup.up { transform: rotate(180deg) translateY(56px); }
+.cup-ball { position: absolute; bottom: 6px; width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #e3b341 60%, #9c7414); opacity: 0; transition: opacity .2s; z-index: 1; }
+.cup-ball.show { opacity: 1; }
+.cup-row.picking .cup-slot { cursor: pointer; }
+.cup-row.picking .cup-slot:hover .cup { transform: rotate(180deg) translateY(10px); }
+.cup-slot.picked { outline: 3px solid var(--gold); outline-offset: 6px; border-radius: 12px; }
+
+/* ---------- Schere-Stein-Papier ---------- */
+.rps-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 26px 14px; }
+.rps-duel { display: flex; align-items: center; gap: clamp(14px, 6vw, 48px); }
+.rps-side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.rps-label { color: var(--muted); font-weight: 700; }
+.rps-hand { font-family: var(--emoji); font-size: clamp(3.6rem, 13vw, 5.5rem); line-height: 1; }
+.rps-hand.house { transform: scaleX(-1); }
+.rps-hand.shake { animation: rpsShake .33s ease-in-out infinite; }
+@keyframes rpsShake { 50% { translate: 0 -18px; } }
+.rps-vs { font-weight: 900; color: var(--gold2); font-size: 1.4rem; letter-spacing: 3px; }
+.rps-choices { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.rps-btn { flex-direction: column; min-width: 96px; padding: 12px 14px; }
+.rps-btn span { font-family: var(--emoji); font-size: 2.2rem; }
+
+@media (max-width: 600px) {
+  .die { width: 52px; height: 52px; padding: 7px; }
+  .craps-spots { grid-template-columns: 1fr 1fr; }
+  .hr-lane { height: 40px; }
+  .hr-horse { font-size: 1.6rem; }
+}

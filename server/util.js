@@ -50,4 +50,23 @@ function makeDeck(decks = 1) {
   return shuffle(cards);
 }
 
-module.exports = { GameError, randInt, randFloat, shuffle, parseBet, makeDeck, payoutFor };
+/**
+ * Mehrere Einsätze auf einmal prüfen (z. B. { pass: 100, field: 50 }).
+ * Gibt { amounts, total } zurück; leere Felder zählen als 0.
+ */
+function parseAmounts(body, keys, profile, { allowZeroTotal = false } = {}) {
+  const amounts = {};
+  let total = 0;
+  for (const k of keys) {
+    const raw = body?.[k];
+    const v = raw === undefined || raw === null || raw === '' ? 0 : Number(raw);
+    if (!Number.isInteger(v) || v < 0) throw new GameError('Ungültiger Einsatz.');
+    amounts[k] = v;
+    total += v;
+  }
+  if (!allowZeroTotal && total < 1) throw new GameError('Bitte zuerst einen Einsatz setzen.');
+  if (total > profile.balance) throw new GameError('Nicht genug Chips für diese Einsätze.');
+  return { amounts, total };
+}
+
+module.exports = { GameError, randInt, randFloat, shuffle, parseBet, makeDeck, payoutFor, parseAmounts };

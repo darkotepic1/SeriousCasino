@@ -80,6 +80,16 @@ Das Profil hat dann wieder 10.000 Chips, Statistik und Verlauf sind gelöscht.
 | 🎟️ Rubbellos | 9 Felder freirubbeln, 3 gleiche gewinnen bis 500× | 95 % |
 | 🪙 Münzwurf | Kopf oder Zahl, jeder Treffer ×1,98 | 99 % pro Wurf |
 | 📈 Limbo | Ziel-Multiplikator wählen, Ergebnis muss drüber liegen | 99 % |
+| 🎲 Craps | Pass Line, Don't Pass, Field, Any 7, Any Craps | 98,6 % (Pass) |
+| 🀄 Sic Bo | 3 Würfel: Klein/Groß, Summen, Einzelzahlen, Zweier, Dreier | 97,2 % (Klein/Groß) |
+| 🂠 Drei-Karten-Poker | Ante/Spielen gegen den Dealer + Paar-Plus | ≈ 97–98 % |
+| ⚔️ Kartenkrieg | Höhere Karte gewinnt, bei Gleichstand Krieg oder Aufgeben | ≈ 97 % |
+| 🐕 Red Dog | Dritte Karte muss zwischen die ersten beiden fallen | ≈ 97 % |
+| 🐉 Drache & Tiger | Eine Karte je Seite, höhere gewinnt | 96,3 % |
+| 🏇 Pferderennen | 6 Pferde, Quoten nach Siegchance | ≈ 95 % |
+| 🔵 Schnell-Bingo | 40 von 75 Kugeln, Gewinn nach fertigen Linien | ≈ 95 % |
+| 🥤 Hütchenspiel | 3–5 Becher, finde die Kugel | 99 % |
+| ✌️ Schere-Stein-Papier | Gegen das Haus, Sieg 1,97× | 99 % |
 
 \* Langfristiger Durchschnitt wie in echten Casinos – auf Dauer gewinnt also das Haus. 😉
 Alle Ergebnisse werden auf dem Server mit einem kryptografischen Zufallsgenerator (`crypto.randomInt`) erzeugt.

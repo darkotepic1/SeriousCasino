@@ -28,6 +28,16 @@ const GAME_NAMES = {
   scratch: 'Rubbellos',
   coinflip: 'Münzwurf',
   limbo: 'Limbo',
+  craps: 'Craps',
+  sicbo: 'Sic Bo',
+  threecard: 'Drei-Karten-Poker',
+  war: 'Kartenkrieg',
+  reddog: 'Red Dog',
+  dragontiger: 'Drache & Tiger',
+  horses: 'Pferderennen',
+  bingo: 'Schnell-Bingo',
+  cups: 'Hütchenspiel',
+  rps: 'Schere-Stein-Papier',
   admin: 'Admin',
 };
 
