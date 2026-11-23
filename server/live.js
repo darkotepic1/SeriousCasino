@@ -39,7 +39,13 @@ function noteRound(p, game, bet, payout) {
 // Während der Admin-Glückssteuerung neu ausgelost wird, Feed-Einträge zurückhalten
 let held = null;
 function hold() { held = []; }
-function release() { const h = held; held = null; (h || []).forEach((x) => (x.__bet ? pushBet(x.__bet) : push(x))); }
+function release() {
+  const h = held;
+  held = null;
+  (h || []).forEach((x) => (x.__bet ? pushBet(x.__bet) : x.__chat ? require('./chat').add({ system: true, text: x.__chat }) : push(x)));
+}
+const holding = () => !!held;
+const queue = (x) => held?.push(x);
 
 function pushBet(entry) {
   bets.unshift(entry);
@@ -65,4 +71,4 @@ function recent() {
   return feed.slice(0, 15);
 }
 
-module.exports = { touch, online, noteRound, push, recent, hold, release, discard, betsView };
+module.exports = { touch, online, noteRound, push, recent, hold, release, discard, betsView, holding, queue };

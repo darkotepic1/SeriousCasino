@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/duels.css">
   <link rel="stylesheet" href="css/live.css">
   <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/social.css">
 </head>
 <body>
   <header class="topbar">
@@ -23,7 +24,7 @@
       <div class="balance" id="balanceBox" title="Dein Guthaben">
         <span class="chip-icon"></span><span id="balance">0</span>
       </div>
-      <button class="profile-btn" id="profileBtn" title="Profil wechseln"><span class="avatar" id="profileAvatar">?</span><span id="profileName">–</span></button>
+      <button class="profile-btn" id="profileBtn" title="Profil wechseln"><span class="avatar-wrap"><span class="avatar" id="profileAvatar">?</span><span class="lvl-badge" id="profileLevel">1</span></span><span id="profileName">–</span></button>
     </div>
   </header>
 
@@ -44,6 +45,7 @@
         </div>
         <div class="side-group">
           <div class="side-title">Du</div>
+          <a href="#/vip" data-nav="vip"><span class="si">👑</span><span>VIP & Aufgaben</span></a>
           <a href="#/stats" data-nav="stats"><span class="si">📊</span><span>Statistik</span></a>
           <a href="#/leaderboard" data-nav="leaderboard"><span class="si">🏆</span><span>Rangliste</span></a>
           <a href="#/settings" data-nav="settings"><span class="si">⚙️</span><span>Einstellungen</span></a>

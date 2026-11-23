@@ -1,8 +1,9 @@
 // Seiten: Startseite, Statistik, Rangliste, Einstellungen, Admin.
-import { h, esc, fmt, fmtSigned, toast, confirmDialog } from './ui.js';
+import { h, esc, fmt, fmtSigned, toast, confirmDialog, modal } from './ui.js';
 export { admin } from './adminpage.js';
 export { duels, duel } from './duelpage.js';
 export { live, cases, battle } from './livepage.js';
+export { vip } from './vippage.js';
 import { sfx } from './sound.js';
 import { session } from './api.js';
 
@@ -165,21 +166,65 @@ function sparkline(values) {
 
 // ---------- Rangliste ----------
 export async function leaderboard(root, ctx) {
-  const list = await ctx.get('/api/profiles');
+  let tab = new URLSearchParams(location.hash.split('?')[1] || '').get('tab') === 'week' ? 'week' : 'all';
   const medal = ['🥇', '🥈', '🥉'];
-  root.appendChild(h(`<div>
+  const el = h(`<div>
     <div class="page-head"><h1>🏆 Rangliste</h1></div>
-    <div class="panel"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>#</th><th>Name</th><th class="num">Chips</th><th class="num">Gewinn/Verlust</th><th class="num">Runden</th><th class="num">Größter Gewinn</th></tr></thead>
-      <tbody>${list.map((p, i) => `<tr class="${p.name === ctx.state.me?.name ? 'hl' : ''}">
-        <td>${i < 3 ? `<span class="medal">${medal[i]}</span>` : i + 1}</td>
-        <td><b>${esc(p.name)}</b></td><td class="num gold"><b>${fmt(p.balance)}</b></td>
-        <td class="num ${signCls(p.net)}">${fmtSigned(p.net)}</td><td class="num">${fmt(p.rounds)}</td><td class="num">${fmtSigned(p.biggestWin)}</td></tr>`).join('')}
-      </tbody></table></div>
-      <p class="muted" style="margin-bottom:0">Sortiert nach aktuellem Guthaben. Alle Profile dieses Casinos.</p>
-    </div>
-    <div class="panel section invite-box"></div></div>`));
-  fillInvite(root.querySelector('.invite-box'), ctx);
+    <div class="bets-tabs"><button data-t="all">Gesamt (Guthaben)</button><button data-t="week">Diese Woche (Gewinn)</button></div>
+    <div class="lb-body"></div>
+    <div class="panel section invite-box"></div></div>`);
+  root.appendChild(el);
+  const body = el.querySelector('.lb-body');
+  const vipCell = (v) => (v ? `<span class="lvl-chip" style="--tc:${v.color}" title="${esc(v.tier)}">${v.icon} ${v.level}</span>` : '');
+  const tipBtn = (name) => (name !== ctx.state.me?.name ? `<button class="btn btn-sm btn-ghost" data-tip="${esc(name)}" title="Chips schenken">🎁</button>` : '');
+
+  async function paint() {
+    el.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('on', b.dataset.t === tab));
+    if (tab === 'all') {
+      const list = await ctx.get('/api/profiles');
+      body.innerHTML = `<div class="panel"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>#</th><th>Name</th><th>Stufe</th><th class="num">Chips</th><th class="num">Gewinn/Verlust</th><th class="num">Runden</th><th class="num">Größter Gewinn</th><th></th></tr></thead>
+        <tbody>${list.map((p, i) => `<tr class="${p.name === ctx.state.me?.name ? 'hl' : ''}">
+          <td>${i < 3 ? `<span class="medal">${medal[i]}</span>` : i + 1}</td><td><b>${esc(p.name)}</b></td><td>${vipCell(p.vip)}</td>
+          <td class="num gold"><b>${fmt(p.balance)}</b></td><td class="num ${signCls(p.net)}">${fmtSigned(p.net)}</td>
+          <td class="num">${fmt(p.rounds)}</td><td class="num">${fmtSigned(p.biggestWin)}</td><td>${tipBtn(p.name)}</td></tr>`).join('')}
+        </tbody></table></div></div>`;
+    } else {
+      const w = await ctx.get('/api/weekly');
+      body.innerHTML = `<div class="panel">
+        <p class="muted" style="margin-top:0">Woche ${esc(w.week)} · Preise am Montag: 🥇 ${fmt(w.prizes[0])} · 🥈 ${fmt(w.prizes[1])} · 🥉 ${fmt(w.prizes[2])} Chips</p>
+        ${w.lastWinners.length ? `<p style="margin-top:0">Letzte Woche: ${w.lastWinners.map((x, i) => `${medal[i]} <b>${esc(x.name)}</b> (${fmtSigned(x.net)})`).join(' · ')}</p>` : ''}
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Name</th><th class="num">Gewinn/Verlust</th><th class="num">Runden</th><th class="num">Eingesetzt</th><th class="num">Bester Gewinn</th><th></th></tr></thead>
+        <tbody>${w.list.map((p, i) => `<tr class="${p.name === ctx.state.me?.name ? 'hl' : ''}">
+          <td>${i < 3 ? `<span class="medal">${medal[i]}</span>` : i + 1}</td><td><b>${esc(p.name)}</b></td>
+          <td class="num ${signCls(p.net)}"><b>${fmtSigned(p.net)}</b></td><td class="num">${fmt(p.rounds)}</td><td class="num">${fmt(p.wagered)}</td><td class="num">${fmtSigned(p.best)}</td><td>${tipBtn(p.name)}</td></tr>`).join('')
+          || '<tr><td colspan="7" class="muted">Diese Woche hat noch niemand gespielt.</td></tr>'}</tbody></table></div></div>`;
+    }
+  }
+  el.querySelectorAll('[data-t]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.t; paint(); }));
+  body.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tip]');
+    if (!b) return;
+    const to = b.dataset.tip;
+    const form = h(`<form class="auth-form" style="margin:0"><h2>🎁 Chips an ${esc(to)} schenken</h2>
+      <input class="input" name="amount" type="number" min="10" step="1" value="500" required>
+      <div class="row" style="justify-content:flex-end"><button class="btn btn-ghost" type="button" data-x>Abbrechen</button><button class="btn btn-gold" type="submit">Schenken</button></div></form>`);
+    const close = modal(form);
+    form.querySelector('[data-x]').addEventListener('click', close);
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      try {
+        const r = await ctx.post('/api/tip', { to, amount: Number(form.amount.value) });
+        ctx.setBalance(r.balance);
+        sfx.coin();
+        toast(`🎁 ${fmt(r.amount)} Chips an ${r.to} geschenkt.`, 'ok');
+        close();
+        paint();
+      } catch (err) { toast(err.message, 'err'); }
+    });
+  });
+  await paint();
+  fillInvite(el.querySelector('.invite-box'), ctx);
 }
 
 /** Zeigt, wie Freunde im Heimnetz mitspielen können */

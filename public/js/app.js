@@ -4,6 +4,7 @@ import { sfx } from './sound.js';
 import { h, esc, fmt, toast, modal, betControl, confetti } from './ui.js';
 import * as pages from './pages.js';
 import { betsPanel } from './bets.js';
+import { initChat } from './chatui.js';
 
 export const CATS = [
   { id: 'live', name: 'Live & Multiplayer', icon: '🟢' },
@@ -322,6 +323,7 @@ window.addEventListener('hashchange', render);
   if (!state.me) await openProfilePicker(true);
   render();
   pollDuels();
+  initChat({ setBalance });
 })();
 
 document.addEventListener('visibilitychange', () => {
@@ -340,12 +342,21 @@ async function pollDuels() {
   try {
     if (state.me && document.visibilityState === 'visible') {
       // Lebenszeichen: zeigt den anderen, dass (und wo) du gerade spielst
-      post('/api/live/ping', { where: state.route }).then((l) => {
+      post('/api/live/ping', { where: state.route, notices: true }).then((l) => {
         live.online = l.online;
         live.feed = l.feed;
         const oc = document.getElementById('onlineCount');
         oc.textContent = l.online.length;
         oc.classList.toggle('hidden', !l.online.length);
+        // Stufe neben dem Profilbild
+        const lv = document.getElementById('profileLevel');
+        if (lv && l.vip) { lv.textContent = l.vip.level; lv.style.background = l.vip.color; lv.title = `${l.vip.icon} ${l.vip.tier} – Stufe ${l.vip.level}`; }
+        // Hinweise: Aufstieg, Aufgaben, Erfolge, Geschenke
+        if (l.notices?.length) {
+          for (const n of l.notices) toast(n.text, 'ok');
+          if (l.notices.some((n) => n.type === 'level' || n.type === 'weekly')) { sfx.bigWin(); confetti(); } else sfx.coin();
+          setBalance(l.balance);
+        }
       }).catch(() => {});
       const r = await post('/api/duels/count');
       const n = r.incoming.length + r.waiting;

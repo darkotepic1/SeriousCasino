@@ -176,6 +176,8 @@ function reset(p) {
   p.history = [];
   p.active = {};
   p.lastRefill = 0;
+  p.weekly = null; // Wochenwertung neu (Stufen und Erfolge bleiben erhalten)
+  p.loseStreak = 0;
 }
 
 function refillInfo(p) {
@@ -226,6 +228,7 @@ function record(p, game, bet, payout, detail = '') {
   if (net > g.biggestWin) g.biggestWin = net;
   p.history.unshift({ game, bet, payout, net, balance: p.balance, time: Date.now(), detail });
   require('./live').noteRound(p, game, bet, payout);
+  require('./progress').onRound(p, game, bet, payout);
   if (p.history.length > HISTORY_LIMIT) p.history.length = HISTORY_LIMIT;
 }
 
@@ -249,11 +252,28 @@ function summary(p) {
     rounds: p.stats.rounds,
     net: p.stats.paid - p.stats.wagered,
     biggestWin: p.stats.biggestWin,
+    vip: require('./progress').badge(p),
   };
+}
+
+/** Chips an einen anderen Spieler verschenken */
+function tip(p, toName, amount) {
+  const to = byName(toName);
+  if (!to) throw new GameError('Spieler nicht gefunden.');
+  if (to.id === p.id) throw new GameError('Du kannst dir nicht selbst etwas schenken.');
+  const n = Number(amount);
+  if (!Number.isInteger(n) || n < 10) throw new GameError('Mindestens 10 Chips.');
+  if (n > p.balance) throw new GameError('So viele Chips hast du nicht.');
+  p.balance -= n;
+  to.balance += n;
+  const pr = require('./progress');
+  pr.notice(to, { type: 'tip', text: `🎁 ${p.name} hat dir ${n.toLocaleString('de-DE')} Chips geschenkt!` });
+  require('./chat').system(`🎁 ${p.name} schenkt ${to.name} ${n.toLocaleString('de-DE')} Chips.`);
+  return { to: to.name, amount: n };
 }
 
 module.exports = {
   START_BALANCE, GAME_NAMES,
   all, create, get, remove, rename, reset, refill, claimDaily, record, publicView, summary,
-  login, logout, setPassword,
+  login, logout, setPassword, tip,
 };

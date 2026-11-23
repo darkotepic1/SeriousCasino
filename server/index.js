@@ -15,6 +15,8 @@ const duels = require('./duels');
 const live = require('./live');
 const livecrash = require('./livecrash');
 const cases = require('./cases');
+const progress = require('./progress');
+const chat = require('./chat');
 const { GameError } = require('./util');
 
 const CLOUD = process.argv.includes('--cloud');
@@ -286,7 +288,29 @@ app.post('/api/live/ping', handle((req) => {
   const p = me(req);
   const where = String(req.body?.where || 'home').replace(/[^a-z0-9-]/gi, '').slice(0, 20) || 'home';
   live.touch(p, where);
-  return { online: live.online(), feed: live.recent(), balance: p.balance };
+  progress.payWeeklyPrizes();
+  return {
+    online: live.online(), feed: live.recent(), balance: p.balance,
+    notices: req.body?.notices ? progress.takeNotices(p) : [], // nur der globale Ping holt Hinweise ab
+    vip: progress.badge(p), chatLast: chat.list().slice(-1)[0]?.at || 0,
+  };
+}));
+
+// ---------- VIP, Aufgaben, Erfolge, Woche ----------
+app.get('/api/me/progress', handle((req) => progress.overview(me(req))));
+app.get('/api/weekly', handle(() => progress.weeklyBoard()));
+
+// ---------- Chat & Geschenke ----------
+app.get('/api/chat', handle((req) => { me(req); return { messages: chat.list(Number(req.query.since) || 0) }; }));
+app.post('/api/chat/send', handle((req) => {
+  const p = me(req);
+  chat.post(p, req.body?.text);
+  return { messages: chat.list(Number(req.body?.since) || 0) };
+}));
+app.post('/api/tip', handle((req) => {
+  const p = me(req);
+  const r = profiles.tip(p, req.body?.to, req.body?.amount);
+  return { ...r, balance: p.balance };
 }));
 
 app.get('/api/live/bets', handle((req) => live.betsView(String(req.query.game || '').replace(/[^a-z0-9]/gi, '') || null)));
@@ -349,7 +373,10 @@ const INSTANT = new Set(['slots', 'roulette', 'dice', 'plinko', 'keno', 'limbo',
 function withLuck(p, game, run) {
   const mode = require('./luck').luckOf(p);
   if (mode === 'normal' || !INSTANT.has(game)) return run();
-  const snap = structuredClone({ balance: p.balance, stats: p.stats, history: p.history, active: p.active });
+  const snap = structuredClone({
+    balance: p.balance, stats: p.stats, history: p.history, active: p.active,
+    vip: p.vip ?? null, quests: p.quests ?? null, achievements: p.achievements ?? null, weekly: p.weekly ?? null, notices: p.notices ?? [], loseStreak: p.loseStreak ?? 0,
+  });
   live.hold();
   try {
     for (let attempt = 1; ; attempt++) {
