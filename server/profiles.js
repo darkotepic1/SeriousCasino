@@ -9,7 +9,7 @@ const REFILL_AMOUNT = 5000;
 const REFILL_COOLDOWN_MS = 60 * 60 * 1000; // 1 Stunde
 const DAILY_BONUS = 1000;
 const HISTORY_LIMIT = 50;
-const MAX_PROFILES = 30;
+const MAX_PROFILES = 50;
 
 const GAME_NAMES = {
   slots: 'Slots',
@@ -125,7 +125,7 @@ function setPassword(p, oldPw, newPw) {
 
 function create(name, password, requirePassword) {
   const clean = cleanName(name);
-  if (all().length >= MAX_PROFILES) throw new GameError('Zu viele Profile.');
+  if (all().length >= MAX_PROFILES) throw new GameError(`Maximal ${MAX_PROFILES} Profile – bitte ein altes Profil löschen.`);
   if (byName(clean)) throw new GameError('Diesen Namen gibt es schon.');
   const hasPw = password !== undefined && password !== null && password !== '';
   if (requirePassword || hasPw) validPassword(password);
