@@ -83,7 +83,7 @@ function open(p, body) {
   const it = roll(c);
   p.balance += it.value;
   profiles.record(p, 'caseopen', c.price, it.value, `${c.name}: ${it.weapon} | ${it.finish} (${RARITY[it.rarity].name})`);
-  return { item: itemView(it), caseId: c.id };
+  return { item: itemView(it), caseId: c.id, price: c.price };
 }
 
 // ---------- Battles ----------

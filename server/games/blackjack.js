@@ -22,6 +22,8 @@ function handValue(cards) {
 const isBlackjack = (cards) => cards.length === 2 && handValue(cards).total === 21;
 
 function draw(st) {
+  // Admin-Steuerung: vorgegebene nächste Karten (Rang 2–14) zuerst ausgeben
+  if (st.forced?.length) return { r: st.forced.shift(), s: ['♠', '♥', '♦', '♣'][Math.floor(Math.random() * 4)] };
   if (!st.shoe.length) st.shoe = makeDeck(DECKS);
   return st.shoe.pop();
 }

@@ -71,6 +71,14 @@ function pick(p, body) {
   const col = Number(body.col);
   if (!Number.isInteger(col) || col < 0 || col >= MODES[st.mode].cols) throw new GameError('Ungültiges Feld.');
   const lvl = st.picks.length;
+  // Admin-Steuerung: "Pech" → Falle genau hier, "Glück" → Falle woanders hin
+  const luck = require('../luck').luckOf(p);
+  const { cols } = MODES[st.mode];
+  if (luck === 'lose' && !st.traps[lvl].includes(col)) st.traps[lvl][0] = col;
+  else if (luck === 'win' && st.traps[lvl].includes(col)) {
+    const free = [...Array(cols).keys()].filter((c) => c !== col && !st.traps[lvl].includes(c));
+    if (free.length) st.traps[lvl][st.traps[lvl].indexOf(col)] = free[0];
+  }
   if (st.traps[lvl].includes(col)) return end(p, st, false, { trapAt: { level: lvl, col } });
   st.picks.push(col);
   if (st.picks.length === LEVELS) return end(p, st, true, { top: true });

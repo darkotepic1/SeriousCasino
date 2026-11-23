@@ -69,7 +69,14 @@ function start(p, body) {
     if (!Number.isFinite(auto) || auto < 1.01 || auto > MAX) throw new GameError('Auto-Cashout muss zwischen 1,01 und 10.000 liegen.');
   }
   p.balance -= bet;
-  p.active.crash = { id: crypto.randomUUID(), bet, auto, crash: crashPoint(), startedAt: Date.now() };
+  let crash = crashPoint();
+  // Admin-Steuerung: feste Vorgabe für diese Runde oder Glück/Pech
+  const L = require('../luck');
+  const forced = Number(L.takeNext(p, 'crash'));
+  if (forced >= 1) crash = Math.floor(forced * 100) / 100;
+  else if (L.luckOf(p) === 'lose') crash = 1 + require('../util').randInt(1, 15) / 100; // 1,01–1,14
+  else if (L.luckOf(p) === 'win') crash = Math.max(crash, auto ? auto + 0.5 : 25);
+  p.active.crash = { id: crypto.randomUUID(), bet, auto, crash, startedAt: Date.now() };
   resolve(p); // Absturz bei 1,00× sofort auswerten
   return view(p);
 }

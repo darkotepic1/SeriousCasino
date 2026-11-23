@@ -115,6 +115,110 @@ export async function admin(root, ctx) {
           </div></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Noch keine Spieler.</p>'}
     </div>`;
 
+    // ---------- Live-Kontrolle: zuschauen & eingreifen ----------
+    body.insertAdjacentHTML('afterbegin', `<div class="panel watch-panel" style="margin-bottom:18px">
+      <h2>🎮 Live-Kontrolle <span class="muted" style="font-size:.8rem;font-weight:500">(aktualisiert jede Sekunde · für Spieler unsichtbar)</span></h2>
+      <p class="muted" style="margin-top:0;font-size:.85rem"><b>Glück/Pech</b> wirkt auf alle Sofort-Spiele (Slots, Roulette, Würfel, Plinko …) und auf Mines, Turm, Hi-Lo, Münzwurf und Crash. In laufenden Runden kannst du zusätzlich direkt eingreifen.</p>
+      <div class="watch-list"></div></div>`);
+    const watchList = body.querySelector('.watch-list');
+    const RANKS = { 1: 'A', 11: 'B', 12: 'D', 13: 'K', 14: 'A' };
+    const rk = (r) => RANKS[r] || String(r);
+    const cardTxt = (c) => (c ? `<span class="wcard ${['♥', '♦'].includes(c.s) ? 'red' : ''}">${rk(c.r)}${c.s}</span>` : '');
+    const ago = (t) => { const s = Math.round((Date.now() - t) / 1000); return s < 60 ? `${s} s` : `${Math.round(s / 60)} min`; };
+
+    function roundHtml(name, r) {
+      const n = esc(name);
+      let inner = '';
+      if (r.game === 'mines') {
+        inner = `<div class="w-mines">${Array.from({ length: 25 }, (_, i) => {
+          const rev = r.revealed.includes(i), mine = r.positions.includes(i);
+          return `<button class="w-tile ${rev ? 'rev' : mine ? 'mine' : ''}" data-ctl="mines" data-name="${n}" data-index="${i}" ${rev ? 'disabled' : ''}>${rev ? '💎' : mine ? '💣' : ''}</button>`;
+        }).join('')}</div><small class="muted">Klick auf ein verdecktes Feld = Mine setzen/entfernen</small>`;
+      } else if (r.game === 'tower') {
+        const cols = { easy: 4, medium: 3, hard: 2, expert: 3 }[r.mode];
+        inner = `<div class="w-tower">${r.traps.map((row, lvl) => ({ row, lvl })).reverse().map(({ row, lvl }) => `<div class="w-trow ${lvl === r.picks.length ? 'cur' : ''}">${Array.from({ length: cols }, (_, c) => {
+          const done = lvl < r.picks.length, trap = row.includes(c), picked = r.picks[lvl] === c;
+          return `<button class="w-tile ${picked ? 'rev' : trap ? 'mine' : ''}" data-ctl="tower" data-name="${n}" data-level="${lvl}" data-col="${c}" ${done ? 'disabled' : ''}>${picked ? '⭐' : trap ? '💀' : ''}</button>`;
+        }).join('')}</div>`).join('')}</div><small class="muted">Klick = Falle setzen/entfernen (nur offene Stockwerke)</small>`;
+      } else if (r.game === 'crash') {
+        inner = `<div class="kv"><span>Rakete</span><span><b>${r.multiplier.toFixed(2)}×</b> · Absturz bei <b class="gold">${r.crash.toFixed(2)}×</b>${r.auto ? ` · Auto ${r.auto}×` : ''}</span></div>
+          <div class="row" style="flex-wrap:wrap"><button class="btn btn-sm btn-red" data-ctl="crash" data-action="now" data-name="${n}">💥 Jetzt crashen</button>
+          <input class="input w-val" type="number" step="0.01" placeholder="z. B. 1,5" style="max-width:100px"><button class="btn btn-sm" data-ctl="crash" data-action="at" data-name="${n}">Crasht bei …</button></div>`;
+      } else if (r.game === 'blackjack') {
+        inner = `<div class="kv"><span>Spieler</span><span>${r.hands.map((hd) => hd.map(cardTxt).join('')).join(' | ')}</span></div>
+          <div class="kv"><span>Dealer (inkl. verdeckt)</span><span>${r.dealer.map(cardTxt).join('')}</span></div>
+          <div class="kv"><span>Vorgegebene nächste Karten</span><span>${r.forced.map(rk).join(', ') || '–'}</span></div>
+          <div class="row" style="flex-wrap:wrap">${[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map((v) => `<button class="btn btn-sm" data-ctl="blackjack" data-name="${n}" data-rank="${v}">${rk(v)}</button>`).join('')}
+          <button class="btn btn-sm btn-ghost" data-ctl="blackjack" data-action="clear" data-name="${n}">leeren</button></div>`;
+      } else if (r.game === 'hilo') {
+        inner = `<div class="kv"><span>Karten</span><span>${r.cards.map(cardTxt).join('')} · ${r.mult.toFixed(2)}×</span></div>`;
+      } else if (r.game === 'coinflip') {
+        inner = `<div class="kv"><span>Serie</span><span>${r.streak}</span></div>`;
+      } else {
+        const cards = r.hand || r.player || r.cards;
+        inner = `<div class="kv"><span>Stand</span><span>${Array.isArray(cards) ? cards.map(cardTxt).join('') : ''}${r.dealer ? ' vs ' + [].concat(r.dealer).map(cardTxt).join('') : ''}${r.point ? ` · Point ${r.point}` : ''}</span></div>`;
+      }
+      return `<div class="w-round"><div class="w-rhead"><b>${esc(r.gameName)}</b><span class="gold">Einsatz ${fmt(r.bet)}</span></div>${inner}</div>`;
+    }
+
+    function playerHtml(p) {
+      const n = esc(p.name);
+      const nexts = Object.entries(p.next || {}).map(([k, v]) => `${k}: ${k === 'hilo' ? rk(v) : k === 'coinflip' ? (v === 'heads' ? 'Kopf' : 'Zahl') : v}`).join(' · ');
+      return `<div class="w-player ${p.online ? 'on' : ''}" data-player="${n}">
+        <div class="w-head"><span class="avatar">${esc(p.name.slice(0, 1).toUpperCase())}</span>
+          <b>${n}</b><span class="muted">${p.online ? `🟢 ${esc(p.where || '')}` : 'offline'}</span>
+          <span class="gold" style="margin-left:auto">${fmt(p.balance)}</span></div>
+        <div class="seg w-luck">${[['normal', 'Normal'], ['lose', '😈 Pech'], ['win', '🍀 Glück']].map(([v, l]) => `<button data-luck="${v}" data-name="${n}" class="${p.luck === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+        ${p.rounds.map((r) => roundHtml(p.name, r)).join('')}
+        <details class="w-next"><summary>Nächsten Zug vorgeben${nexts ? ` <span class="gold">(${esc(nexts)})</span>` : ''}</summary>
+          <div class="row" style="flex-wrap:wrap;margin-top:6px"><span class="muted">Crash:</span><input class="input w-val" type="number" step="0.01" placeholder="1,00" style="max-width:90px"><button class="btn btn-sm" data-ctl="crash" data-action="next" data-name="${n}">nächste Runde</button></div>
+          <div class="row" style="flex-wrap:wrap;margin-top:6px"><span class="muted">Hi-Lo:</span>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((v) => `<button class="btn btn-sm" data-ctl="hilo" data-name="${n}" data-rank="${v}">${rk(v)}</button>`).join('')}</div>
+          <div class="row" style="margin-top:6px"><span class="muted">Münzwurf:</span><button class="btn btn-sm" data-ctl="coinflip" data-name="${n}" data-result="heads">👑 Kopf</button><button class="btn btn-sm" data-ctl="coinflip" data-name="${n}" data-result="tails">⭐ Zahl</button>
+          ${nexts ? `<button class="btn btn-sm btn-ghost" data-ctl="any" data-action="clearNext" data-name="${n}">Vorgaben löschen</button>` : ''}</div>
+        </details>
+        ${p.recent.length ? `<div class="w-recent">${p.recent.map((h) => `<span class="${h.payout > h.bet ? 'pos' : h.payout < h.bet ? 'neg' : ''}" title="${esc(h.detail)}">${esc(h.game)} ${h.payout - h.bet >= 0 ? '+' : '−'}${fmt(Math.abs(h.payout - h.bet))} <small class="muted">${ago(h.time)}</small></span>`).join('')}</div>` : ''}
+      </div>`;
+    }
+
+    let openDetails = new Set();
+    async function watchLoop() {
+      if (!alive || !body.contains(watchList)) return;
+      // Nicht neu zeichnen, während in ein Feld getippt wird
+      const typing = watchList.contains(document.activeElement) && document.activeElement.tagName === 'INPUT';
+      if (!typing) {
+        try {
+          const w = await adminApi('GET', '/api/admin/watch');
+          openDetails = new Set([...watchList.querySelectorAll('details[open]')].map((d) => d.closest('[data-player]').dataset.player));
+          watchList.innerHTML = w.players.map(playerHtml).join('') || '<p class="muted">Noch keine Spieler.</p>';
+          openDetails.forEach((n) => watchList.querySelector(`[data-player="${CSS.escape(n)}"] details`)?.setAttribute('open', ''));
+        } catch { /* nächster Versuch */ }
+      }
+      setTimeout(watchLoop, 1000);
+    }
+    watchList.addEventListener('click', async (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      try {
+        if (b.dataset.luck) {
+          await adminApi('POST', '/api/admin/luck', { name: b.dataset.name, mode: b.dataset.luck });
+        } else if (b.dataset.ctl) {
+          const val = b.parentElement.querySelector('.w-val');
+          await adminApi('POST', '/api/admin/control', {
+            name: b.dataset.name, game: b.dataset.ctl, action: b.dataset.action,
+            index: b.dataset.index !== undefined ? Number(b.dataset.index) : undefined,
+            level: b.dataset.level !== undefined ? Number(b.dataset.level) : undefined,
+            col: b.dataset.col !== undefined ? Number(b.dataset.col) : undefined,
+            rank: b.dataset.rank !== undefined ? Number(b.dataset.rank) : undefined,
+            result: b.dataset.result,
+            value: val ? Number(String(val.value).replace(',', '.')) : undefined,
+          });
+        } else return;
+        sfx.click();
+        if (document.activeElement) document.activeElement.blur();
+      } catch (err) { toast(err.message, 'err'); }
+    });
+    watchLoop();
+
     // ---------- Live-Crash steuern + Online-Liste ----------
     body.insertAdjacentHTML('beforeend', `<div class="panel section lc-admin">
       <h2>🚀 Live-Crash steuern <span class="muted" style="font-size:.8rem;font-weight:500">(für Spieler unsichtbar)</span></h2>

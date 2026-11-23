@@ -63,6 +63,14 @@ function reveal(p, body) {
   const idx = Number(body.index);
   if (!Number.isInteger(idx) || idx < 0 || idx >= TILES) throw new GameError('Ungültiges Feld.');
   if (st.revealed.includes(idx)) throw new GameError('Feld ist schon aufgedeckt.');
+  // Admin-Steuerung: bei "Pech" liegt unter dem Feld eine Mine, bei "Glück" nie
+  const luck = require('../luck').luckOf(p);
+  if (luck === 'lose' && !st.positions.includes(idx)) {
+    st.positions[0] = idx;
+  } else if (luck === 'win' && st.positions.includes(idx)) {
+    const free = [...Array(TILES).keys()].filter((i) => i !== idx && !st.positions.includes(i) && !st.revealed.includes(i));
+    if (free.length) st.positions[st.positions.indexOf(idx)] = free[require('../util').randInt(0, free.length)];
+  }
   if (st.positions.includes(idx)) {
     return { ...end(p, st, false), hit: idx };
   }

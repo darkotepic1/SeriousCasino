@@ -28,7 +28,14 @@ function noteRound(p, game, bet, payout) {
   if (bet > 0 && net >= 1000 && payout >= bet * 10) push({ type: 'bigwin', name: p.name, game, net, mult: Math.round((payout / bet) * 100) / 100 });
 }
 
+// Während der Admin-Glückssteuerung neu ausgelost wird, Feed-Einträge zurückhalten
+let held = null;
+function hold() { held = []; }
+function release() { const h = held; held = null; (h || []).forEach(push); }
+function discard() { held = []; }
+
 function push(item) {
+  if (held) { held.push(item); return; }
   feed.unshift({ ...item, at: Date.now() });
   if (feed.length > FEED_MAX) feed.length = FEED_MAX;
 }
@@ -37,4 +44,4 @@ function recent() {
   return feed.slice(0, 15);
 }
 
-module.exports = { touch, online, noteRound, push, recent };
+module.exports = { touch, online, noteRound, push, recent, hold, release, discard };

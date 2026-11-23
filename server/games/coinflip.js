@@ -45,7 +45,14 @@ function flip(p, body) {
   if (!st) throw new GameError('Keine laufende Serie.');
   const side = body.side === 'heads' ? 'heads' : body.side === 'tails' ? 'tails' : null;
   if (!side) throw new GameError('Kopf oder Zahl?');
-  const result = randInt(0, 2) === 0 ? 'heads' : 'tails';
+  let result = randInt(0, 2) === 0 ? 'heads' : 'tails';
+  // Admin-Steuerung: fester nächster Wurf oder Glück/Pech
+  const L = require('../luck');
+  const forced = L.takeNext(p, 'coinflip');
+  const other = side === 'heads' ? 'tails' : 'heads';
+  if (forced === 'heads' || forced === 'tails') result = forced;
+  else if (L.luckOf(p) === 'win') result = side;
+  else if (L.luckOf(p) === 'lose') result = other;
   st.flips.push({ side, result });
   if (result !== side) return end(p, st, false, { result });
   st.streak++;

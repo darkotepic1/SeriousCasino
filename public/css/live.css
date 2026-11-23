@@ -87,6 +87,29 @@
 .bt-total { text-align: center; font-size: 1.5rem; font-weight: 900; color: var(--gold2); font-variant-numeric: tabular-nums; }
 .bt-col.winner .bt-total::before { content: "🏆 "; font-family: var(--emoji); }
 
+/* ---------- Admin: Live-Kontrolle ---------- */
+.watch-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.w-player { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: #08140e; border: 1px solid var(--line); opacity: .7; }
+.w-player.on { opacity: 1; border-color: var(--green2); }
+.w-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.w-luck button.on[data-luck="lose"] { color: #ff8a8d; box-shadow: inset 0 0 0 1px var(--red); }
+.w-luck button.on[data-luck="win"] { color: #7dffb3; box-shadow: inset 0 0 0 1px var(--green2); }
+.w-round { padding: 10px; border-radius: 10px; background: rgba(227, 179, 65, .07); border: 1px solid var(--gold-dark); display: flex; flex-direction: column; gap: 6px; }
+.w-rhead { display: flex; justify-content: space-between; }
+.w-mines { display: grid; grid-template-columns: repeat(5, 34px); gap: 4px; }
+.w-tower { display: flex; flex-direction: column; gap: 3px; }
+.w-trow { display: flex; gap: 4px; opacity: .6; }
+.w-trow.cur { opacity: 1; }
+.w-trow .w-tile { width: 44px; }
+.w-tile { width: 34px; height: 34px; border-radius: 7px; border: 1px solid var(--line); background: #1b3327; cursor: pointer; font-family: var(--emoji); font-size: 1rem; }
+.w-tile:hover:not(:disabled) { border-color: var(--gold); }
+.w-tile.mine { background: rgba(229, 72, 77, .35); }
+.w-tile.rev { background: rgba(46, 204, 113, .3); cursor: default; }
+.wcard { display: inline-block; padding: 1px 5px; margin: 0 2px; border-radius: 4px; background: #fff; color: #111; font-weight: 800; font-size: .85rem; }
+.wcard.red { color: #c8202a; }
+.w-next summary { cursor: pointer; color: var(--muted); font-size: .88rem; }
+.w-recent { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .78rem; }
+
 /* ---------- Allgemeine Animationen ---------- */
 /* Seitenwechsel */
 .app > * { animation: pageIn .38s cubic-bezier(.2, .8, .2, 1); }

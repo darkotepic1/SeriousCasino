@@ -59,7 +59,19 @@ function guess(p, body) {
   const pr = dir === 'higher' ? pHigher(cur) : dir === 'lower' ? pLower(cur) : -1;
   if (pr < 0) throw new GameError('Höher oder niedriger?');
   if (pr === 0) throw new GameError('Das geht bei dieser Karte nicht.');
-  const next = drawCard();
+  let next = drawCard();
+  // Admin-Steuerung: feste nächste Karte (Rang 1–13) oder Glück/Pech
+  const L = require('../luck');
+  const forced = L.takeNext(p, 'hilo');
+  const r0 = rankOf(cur);
+  const fits = (r) => (dir === 'higher' ? r > r0 : r < r0);
+  const card = (r) => ({ r: r === 1 ? 14 : r, s: SUITS[randInt(0, 4)] });
+  if (forced) next = card(Number(forced));
+  else if (L.luckOf(p) !== 'normal') {
+    const want = L.luckOf(p) === 'win';
+    const opts = [...Array(13).keys()].map((i) => i + 1).filter((r) => fits(r) === want);
+    if (opts.length) next = card(opts[randInt(0, opts.length)]);
+  }
   st.cards.push(next);
   if (st.cards.length > 60) st.cards.splice(0, st.cards.length - 60);
   const ok = dir === 'higher' ? rankOf(next) > rankOf(cur) : rankOf(next) < rankOf(cur);

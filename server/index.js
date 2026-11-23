@@ -276,6 +276,10 @@ app.post('/api/admin/delete', adminRoute((b) => admin.remove(b.name)));
 app.get('/api/admin/livecrash', adminRoute(() => livecrash.adminState()));
 app.post('/api/admin/livecrash/rig', adminRoute((b) => livecrash.adminRig(b)));
 app.get('/api/admin/online', adminRoute(() => ({ online: live.online() })));
+const adminControl = require('./admincontrol');
+app.get('/api/admin/watch', adminRoute(() => adminControl.list()));
+app.post('/api/admin/luck', adminRoute((b) => adminControl.setLuck(b)));
+app.post('/api/admin/control', adminRoute((b) => adminControl.control(b)));
 
 // ---------- Live: wer ist online, großer-Gewinn-Feed ----------
 app.post('/api/live/ping', handle((req) => {
@@ -305,7 +309,8 @@ app.post('/api/cases/:action', handle((req) => {
   if (!Object.hasOwn(cases.actions, action)) throw new GameError('Unbekannte Aktion.', 404);
   const p = me(req);
   live.touch(p, 'cases');
-  return { ...cases.actions[action](p, req.body || {}), balance: p.balance };
+  const run = () => cases.actions[action](p, req.body || {});
+  return { ...(action === 'open' ? withLuck(p, 'caseopen', run) : run()), balance: p.balance };
 }));
 
 // ---------- Duelle (1 gegen 1) ----------
@@ -332,9 +337,34 @@ app.post('/api/games/:game/:action', handle((req) => {
   }
   const p = me(req);
   live.touch(p, req.params.game);
-  const result = g[action](p, req.body || {});
+  const result = withLuck(p, req.params.game, () => g[action](p, req.body || {}));
   return { ...result, balance: p.balance };
 }));
+
+// Admin-Glückssteuerung für Sofort-Spiele: Runde so oft neu auslosen, bis sie zur Vorgabe passt
+// (Pech = Spieler verliert Geld, Glück = Spieler gewinnt). Zustand wird zwischen den Versuchen zurückgesetzt.
+const INSTANT = new Set(['slots', 'roulette', 'dice', 'plinko', 'keno', 'limbo', 'wheel', 'scratch', 'cups', 'rps', 'sicbo', 'dragontiger', 'baccarat', 'bingo', 'horses', 'war', 'caseopen']);
+function withLuck(p, game, run) {
+  const mode = require('./luck').luckOf(p);
+  if (mode === 'normal' || !INSTANT.has(game)) return run();
+  const snap = structuredClone({ balance: p.balance, stats: p.stats, history: p.history, active: p.active });
+  live.hold();
+  try {
+    for (let attempt = 1; ; attempt++) {
+      const r = run();
+      const bet = r.bet ?? r.totalBet ?? r.price ?? 0;
+      const payout = r.payout ?? r.item?.value ?? 0;
+      const finished = !r.running;
+      const ok = !finished || (mode === 'lose' ? payout < bet : payout > bet);
+      if (ok || attempt >= 80) { live.release(); return r; }
+      Object.assign(p, structuredClone(snap));
+      live.discard();
+    }
+  } catch (e) {
+    live.release();
+    throw e;
+  }
+}
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Nicht gefunden.' }));
 
