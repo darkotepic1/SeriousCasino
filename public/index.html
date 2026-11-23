@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07110c">
+  <meta name="theme-color" content="#0b1219">
   <title>Spaß-Casino</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎰</text></svg>">
   <link rel="stylesheet" href="css/style.css">
@@ -11,32 +11,59 @@
   <link rel="stylesheet" href="css/games3.css">
   <link rel="stylesheet" href="css/duels.css">
   <link rel="stylesheet" href="css/live.css">
+  <link rel="stylesheet" href="css/layout.css">
 </head>
 <body>
   <header class="topbar">
-    <a href="#/" class="logo" aria-label="Startseite"><span class="logo-icon">🎰</span><span class="logo-text">Spaß-Casino</span></a>
-    <nav class="mainnav" id="mainnav">
-      <a href="#/" data-nav="home">Spiele</a>
-      <a href="#/live" data-nav="live">🟢 Live <span class="nav-online hidden" id="onlineCount"></span></a>
-      <a href="#/duels" data-nav="duels">⚔️ Duelle <span class="nav-badge hidden" id="duelBadge"></span></a>
-      <a href="#/cases" data-nav="cases">📦 Cases</a>
-      <a href="#/stats" data-nav="stats">Statistik</a>
-      <a href="#/leaderboard" data-nav="leaderboard">Rangliste</a>
-      <a href="#/settings" data-nav="settings">Einstellungen</a>
-    </nav>
+    <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menü">☰</button>
+    <a href="#/" class="logo" aria-label="Lobby"><span class="logo-icon">🎰</span><span class="logo-text">Spaß-Casino</span></a>
+    <div class="top-search"><span>🔍</span><input id="searchInput" type="search" placeholder="Spiele suchen …" autocomplete="off"></div>
     <div class="topbar-right">
       <button class="icon-btn" id="soundToggle" title="Sound ein/aus" aria-label="Sound ein/aus">🔊</button>
-      <button class="profile-btn" id="profileBtn" title="Profil wechseln"><span class="avatar" id="profileAvatar">?</span><span id="profileName">–</span></button>
       <div class="balance" id="balanceBox" title="Dein Guthaben">
         <span class="chip-icon"></span><span id="balance">0</span>
       </div>
-      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menü">☰</button>
+      <button class="profile-btn" id="profileBtn" title="Profil wechseln"><span class="avatar" id="profileAvatar">?</span><span id="profileName">–</span></button>
     </div>
   </header>
 
-  <div class="banner hidden" id="banner"></div>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <nav class="mainnav" id="mainnav">
+        <div class="side-group">
+          <a href="#/" data-nav="home"><span class="si">🏠</span><span>Lobby</span></a>
+          <a href="#/live" data-nav="live"><span class="si">🟢</span><span>Live</span><span class="nav-online hidden" id="onlineCount"></span></a>
+          <a href="#/favorites" data-nav="favorites"><span class="si">⭐</span><span>Favoriten</span></a>
+          <a href="#/recent" data-nav="recent"><span class="si">🕘</span><span>Zuletzt gespielt</span></a>
+        </div>
+        <div class="side-group" id="sideCats"></div>
+        <div class="side-group">
+          <div class="side-title">Multiplayer</div>
+          <a href="#/duels" data-nav="duels"><span class="si">⚔️</span><span>Duelle</span><span class="nav-badge hidden" id="duelBadge"></span></a>
+          <a href="#/cases" data-nav="cases"><span class="si">📦</span><span>Cases & Battles</span></a>
+        </div>
+        <div class="side-group">
+          <div class="side-title">Du</div>
+          <a href="#/stats" data-nav="stats"><span class="si">📊</span><span>Statistik</span></a>
+          <a href="#/leaderboard" data-nav="leaderboard"><span class="si">🏆</span><span>Rangliste</span></a>
+          <a href="#/settings" data-nav="settings"><span class="si">⚙️</span><span>Einstellungen</span></a>
+        </div>
+      </nav>
+    </aside>
+    <div class="main-col">
+      <div class="banner hidden" id="banner"></div>
+      <main id="app" class="app"></main>
+    </div>
+  </div>
+  <div class="side-backdrop" id="sideBackdrop"></div>
 
-  <main id="app" class="app"></main>
+  <nav class="bottomnav">
+    <a href="#/" data-nav="home"><span>🏠</span>Lobby</a>
+    <a href="#/live" data-nav="live"><span>🟢</span>Live</a>
+    <a href="#/duels" data-nav="duels"><span>⚔️</span>Duelle</a>
+    <a href="#/cases" data-nav="cases"><span>📦</span>Cases</a>
+    <button id="bottomMenu"><span>☰</span>Menü</button>
+  </nav>
 
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="modal-card" id="modalCard"></div></div>
   <div id="toasts" class="toasts"></div>

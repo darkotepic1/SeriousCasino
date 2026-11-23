@@ -8,22 +8,98 @@ import { session } from './api.js';
 
 const signCls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
 
-// ---------- Startseite ----------
-export function home(root, ctx) {
+// ---------- Lobby ----------
+/** Kompakte Spielkarte (für Reihen und Raster) */
+function gameCard(g, ctx) {
+  const fav = ctx.favorites.has(g.id);
+  return `<a class="gcard" href="#/${g.id}" style="--tile-a:${g.a};--tile-b:${g.b}">
+    <span class="gcard-icon">${g.icon}</span>
+    ${g.cat === 'live' ? '<span class="gcard-badge live">● LIVE</span>' : g.hot ? '<span class="gcard-badge">🔥</span>' : ''}
+    <button class="gcard-fav ${fav ? 'on' : ''}" data-fav="${g.id}" title="Favorit">${fav ? '★' : '☆'}</button>
+    <span class="gcard-name">${esc(g.name)}</span>
+  </a>`;
+}
+
+function wireFavs(root, ctx, onChange) {
+  root.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-fav]');
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const on = ctx.favorites.toggle(b.dataset.fav);
+    sfx.click();
+    b.classList.toggle('on', on);
+    b.textContent = on ? '★' : '☆';
+    onChange?.();
+  });
+}
+
+function row(title, games, ctx, more = '') {
+  if (!games.length) return '';
+  return `<section class="lobby-row"><div class="lr-head"><h2>${title}</h2>${more}</div>
+    <div class="lr-scroll">${games.map((g) => gameCard(g, ctx)).join('')}</div></section>`;
+}
+
+export async function home(root, ctx) {
   const name = ctx.state.me?.name ?? '';
-  root.appendChild(h(`<div>
-    <section class="hero">
-      <h1>Hallo ${esc(name)}, worauf hast du Lust? 🍀</h1>
-      <p>Nur Spaß-Chips – kein echtes Geld. Viel Glück!</p>
+  const byId = (id) => ctx.GAMES.find((g) => g.id === id);
+  const recentGames = ctx.recent.list().map(byId).filter(Boolean);
+  const favGames = ctx.favorites.list().map(byId).filter(Boolean);
+  const el = h(`<div class="lobby">
+    <section class="hero-banner">
+      <div class="hb-text">
+        <div class="hb-kicker">Willkommen zurück, ${esc(name)} 👋</div>
+        <h1>Spiel mit Freunden.<br><span class="gold">Live.</span></h1>
+        <p>Eine Rakete für alle, Case Battles und Duelle – nur mit Spaß-Chips.</p>
+        <div class="row" style="flex-wrap:wrap"><a class="btn btn-gold" href="#/livecrash">🚀 Live-Crash spielen</a><a class="btn" href="#/cases">📦 Case Battles</a><a class="btn" href="#/duels">⚔️ Duelle</a></div>
+      </div>
+      <div class="hb-art">🎰</div>
     </section>
-    <div class="tiles">${ctx.GAMES.map((g) => `
-      <a class="tile" href="#/${g.id}" style="--tile-a:${g.a};--tile-b:${g.b}">
-        <span class="tile-tag ${g.isNew ? 'is-new' : ''}">${g.isNew ? 'NEU · ' : ''}${esc(g.tag)}</span>
-        <span class="tile-icon">${g.icon}</span>
-        <h3>${esc(g.name)}</h3>
-        <p>${esc(g.desc)}</p>
-      </a>`).join('')}
-    </div></div>`));
+    <div class="lobby-rows">
+      ${row('⭐ Deine Favoriten', favGames, ctx, '<a class="lr-more" href="#/favorites">Alle</a>')}
+      ${row('🕘 Zuletzt gespielt', recentGames.slice(0, 10), ctx, '<a class="lr-more" href="#/recent">Alle</a>')}
+      ${row('🔥 Beliebt', ctx.GAMES.filter((g) => g.hot), ctx)}
+      ${ctx.CATS.map((c) => row(`${c.icon} ${esc(c.name)}`, ctx.GAMES.filter((g) => g.cat === c.id), ctx, `<a class="lr-more" href="#/cat?c=${c.id}">Alle ${ctx.GAMES.filter((g) => g.cat === c.id).length}</a>`)).join('')}
+      <section class="lobby-row"><div class="lr-head"><h2>⚔️ Multiplayer</h2></div>
+        <div class="lr-scroll">
+          <a class="gcard" href="#/duels" style="--tile-a:#5c1a1a;--tile-b:#1f0808"><span class="gcard-icon">⚔️</span><span class="gcard-name">Duelle 1 gegen 1</span></a>
+          <a class="gcard" href="#/cases" style="--tile-a:#3d1a5c;--tile-b:#12081f"><span class="gcard-icon">📦</span><span class="gcard-name">Case Battles</span></a>
+        </div></section>
+    </div>
+    <div class="lobby-bets"></div>
+  </div>`);
+  root.appendChild(el);
+  wireFavs(el, ctx);
+  const { betsPanel } = await import('./bets.js');
+  const bets = betsPanel(ctx, { GAMES: ctx.GAMES, title: '🎲 Live-Wetten' });
+  el.querySelector('.lobby-bets').appendChild(bets.el);
+  return () => bets.cleanup();
+}
+
+function gridPage(root, ctx, title, games, empty) {
+  const el = h(`<div><div class="page-head"><a class="back-link" href="#/">← Lobby</a><h1>${title}</h1></div>
+    ${games.length ? `<div class="game-grid">${games.map((g) => gameCard(g, ctx)).join('')}</div>` : `<div class="panel"><p class="muted" style="margin:0">${empty}</p></div>`}</div>`);
+  root.appendChild(el);
+  wireFavs(el, ctx);
+}
+
+export function cat(root, ctx) {
+  const c = ctx.CATS.find((x) => x.id === ctx.cat) || ctx.CATS[0];
+  gridPage(root, ctx, `${c.icon} ${esc(c.name)}`, ctx.GAMES.filter((g) => g.cat === c.id), '');
+}
+
+export function favorites(root, ctx) {
+  gridPage(root, ctx, '⭐ Favoriten', ctx.favorites.list().map((id) => ctx.GAMES.find((g) => g.id === id)).filter(Boolean), 'Noch keine Favoriten – tippe bei einem Spiel auf den ☆-Stern.');
+}
+
+export function recent(root, ctx) {
+  gridPage(root, ctx, '🕘 Zuletzt gespielt', ctx.recent.list().map((id) => ctx.GAMES.find((g) => g.id === id)).filter(Boolean), 'Du hast noch nichts gespielt.');
+}
+
+export function search(root, ctx) {
+  const q = (new URLSearchParams(location.hash.split('?')[1] || '').get('q') || '').toLowerCase();
+  const hits = ctx.GAMES.filter((g) => `${g.name} ${g.desc} ${g.tag}`.toLowerCase().includes(q));
+  gridPage(root, ctx, `🔍 „${esc(q)}“`, hits, 'Kein Spiel gefunden.');
 }
 
 // ---------- Statistik ----------

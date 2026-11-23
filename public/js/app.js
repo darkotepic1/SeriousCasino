@@ -3,36 +3,57 @@ import { get, post, session } from './api.js';
 import { sfx } from './sound.js';
 import { h, esc, fmt, toast, modal, betControl, confetti } from './ui.js';
 import * as pages from './pages.js';
+import { betsPanel } from './bets.js';
+
+export const CATS = [
+  { id: 'live', name: 'Live & Multiplayer', icon: '🟢' },
+  { id: 'originals', name: 'Originals', icon: '⚡' },
+  { id: 'table', name: 'Tisch & Karten', icon: '🃏' },
+  { id: 'lotto', name: 'Slots & Lotto', icon: '🎰' },
+];
 
 export const GAMES = [
-  { id: 'livecrash', name: 'Live-Crash', icon: '🚀', desc: 'Eine Rakete für alle – wer steigt zuletzt aus?', tag: 'LIVE · Multiplayer', a: '#7a1f3d', b: '#2a0614', isNew: true },
-  { id: 'slots', name: 'Slots', icon: '🎰', desc: '5 Walzen, 10 Gewinnlinien', tag: 'Klassiker', a: '#5a3d06', b: '#1d1402' },
-  { id: 'blackjack', name: 'Blackjack', icon: '🃏', desc: 'Schlag den Dealer – Blackjack zahlt 3:2', tag: 'Karten', a: '#0f5132', b: '#06261a' },
-  { id: 'roulette', name: 'Roulette', icon: '🎡', desc: 'Europäisch mit einer Null', tag: 'Tisch', a: '#5c1a1d', b: '#1f0809' },
-  { id: 'poker', name: 'Video Poker', icon: '♠️', desc: 'Jacks or Better', tag: 'Karten', a: '#1b2f5c', b: '#08101f' },
-  { id: 'crash', name: 'Crash', icon: '🚀', desc: 'Steig aus, bevor es kracht', tag: 'Nervenkitzel', a: '#3b1d5c', b: '#12081f' },
-  { id: 'mines', name: 'Mines', icon: '💣', desc: 'Finde Diamanten, meide Minen', tag: 'Taktik', a: '#1d4a4f', b: '#071a1c' },
-  { id: 'plinko', name: 'Plinko', icon: '🎯', desc: 'Kugeln fallen lassen, Multiplikator fangen', tag: 'Glück', a: '#5c3a1a', b: '#1f1208' },
-  { id: 'dice', name: 'Würfel', icon: '🎲', desc: 'Über oder unter – du bestimmst die Chance', tag: 'Schnell', a: '#2f4f1d', b: '#0e1a08' },
-  { id: 'keno', name: 'Keno', icon: '🔢', desc: 'Bis zu 10 Zahlen tippen, 10 werden gezogen', tag: 'Lotto', a: '#1d3f5c', b: '#08141f' },
-  { id: 'baccarat', name: 'Baccarat', icon: '🎴', desc: 'Spieler oder Bank – wer kommt näher an 9?', tag: 'Karten', a: '#5c1a3f', b: '#1f0814' },
-  { id: 'hilo', name: 'Hi-Lo', icon: '↕️', desc: 'Nächste Karte höher oder niedriger?', tag: 'Karten', a: '#1a4f4a', b: '#081f1c' },
-  { id: 'wheel', name: 'Glücksrad', icon: '🍀', desc: 'Dreh das Rad – Risiko frei wählbar', tag: 'Glück', a: '#5c4a0a', b: '#1f1903' },
-  { id: 'tower', name: 'Turm', icon: '🗼', desc: 'Stockwerk für Stockwerk – meide die Fallen', tag: 'Taktik', a: '#3a3f5c', b: '#10121f' },
-  { id: 'scratch', name: 'Rubbellos', icon: '🎟️', desc: 'Freirubbeln, 3 gleiche gewinnen', tag: 'Los', a: '#4a1d5c', b: '#16081f' },
-  { id: 'coinflip', name: 'Münzwurf', icon: '🪙', desc: 'Kopf oder Zahl – baue eine Serie auf', tag: 'Serie', a: '#5c4a1a', b: '#1f1808' },
-  { id: 'limbo', name: 'Limbo', icon: '📈', desc: 'Wähle dein Ziel – liegt das Ergebnis drüber?', tag: 'Schnell', a: '#1d5c3a', b: '#081f12' },
-{ id: 'craps', name: 'Craps', icon: '🎲', desc: 'Pass Line, Field & Co. – der Würfeltisch', tag: 'Würfel', a: '#1f5c3a', b: '#08200f', isNew: true },
-  { id: 'sicbo', name: 'Sic Bo', icon: '🀄', desc: 'Drei Würfel, viele Wetten', tag: 'Würfel', a: '#5c1a2e', b: '#1f0810', isNew: true },
-  { id: 'threecard', name: 'Drei-Karten-Poker', icon: '🂠', desc: 'Ante, Paar-Plus und Dealer-Duell', tag: 'Karten', a: '#2e1a5c', b: '#0e081f', isNew: true },
-  { id: 'war', name: 'Kartenkrieg', icon: '⚔️', desc: 'Höhere Karte gewinnt – oder Krieg!', tag: 'Karten', a: '#5c2a1a', b: '#1f0d08', isNew: true },
-  { id: 'reddog', name: 'Red Dog', icon: '🐕', desc: 'Fällt die dritte Karte dazwischen?', tag: 'Karten', a: '#5c1a1a', b: '#1f0808', isNew: true },
-  { id: 'dragontiger', name: 'Drache & Tiger', icon: '🐉', desc: 'Eine Karte, ein Duell, schnell entschieden', tag: 'Karten', a: '#5c3a0a', b: '#1f1303', isNew: true },
-  { id: 'horses', name: 'Pferderennen', icon: '🏇', desc: 'Setz auf Favorit oder Außenseiter', tag: 'Rennen', a: '#2f5a2a', b: '#0e1f0b', isNew: true },
-  { id: 'bingo', name: 'Schnell-Bingo', icon: '🔵', desc: '40 Kugeln – wie viele Linien schaffst du?', tag: 'Lotto', a: '#1b4f8a', b: '#081a30', isNew: true },
-  { id: 'cups', name: 'Hütchenspiel', icon: '🥤', desc: 'Wo ist die Kugel?', tag: 'Glück', a: '#4a3a1d', b: '#1a1308', isNew: true },
-  { id: 'rps', name: 'Schere-Stein-Papier', icon: '✌️', desc: 'Gegen das Haus – Sieg zahlt 1,97×', tag: 'Schnell', a: '#1d4a5c', b: '#08191f', isNew: true },
+  { id: 'livecrash', cat: 'live', name: 'Live-Crash', icon: '🚀', desc: 'Eine Rakete für alle – wer steigt zuletzt aus?', tag: 'LIVE', a: '#7a1f3d', b: '#2a0614', hot: true },
+  { id: 'crash', cat: 'originals', name: 'Crash', icon: '🚀', desc: 'Steig aus, bevor es kracht', tag: 'Nervenkitzel', a: '#3b1d5c', b: '#12081f', hot: true },
+  { id: 'mines', cat: 'originals', name: 'Mines', icon: '💣', desc: 'Finde Diamanten, meide Minen', tag: 'Taktik', a: '#1d4a4f', b: '#071a1c', hot: true },
+  { id: 'plinko', cat: 'originals', name: 'Plinko', icon: '🎯', desc: 'Kugeln fallen lassen, Multiplikator fangen', tag: 'Glück', a: '#5c3a1a', b: '#1f1208', hot: true },
+  { id: 'dice', cat: 'originals', name: 'Würfel', icon: '🎲', desc: 'Über oder unter – du bestimmst die Chance', tag: 'Schnell', a: '#2f4f1d', b: '#0e1a08' },
+  { id: 'limbo', cat: 'originals', name: 'Limbo', icon: '📈', desc: 'Wähle dein Ziel – liegt das Ergebnis drüber?', tag: 'Schnell', a: '#1d5c3a', b: '#081f12' },
+  { id: 'tower', cat: 'originals', name: 'Turm', icon: '🗼', desc: 'Stockwerk für Stockwerk – meide die Fallen', tag: 'Taktik', a: '#3a3f5c', b: '#10121f' },
+  { id: 'hilo', cat: 'originals', name: 'Hi-Lo', icon: '↕️', desc: 'Nächste Karte höher oder niedriger?', tag: 'Karten', a: '#1a4f4a', b: '#081f1c' },
+  { id: 'coinflip', cat: 'originals', name: 'Münzwurf', icon: '🪙', desc: 'Kopf oder Zahl – baue eine Serie auf', tag: 'Serie', a: '#5c4a1a', b: '#1f1808' },
+  { id: 'cups', cat: 'originals', name: 'Hütchenspiel', icon: '🥤', desc: 'Wo ist die Kugel?', tag: 'Glück', a: '#4a3a1d', b: '#1a1308' },
+  { id: 'rps', cat: 'originals', name: 'Schere-Stein-Papier', icon: '✌️', desc: 'Gegen das Haus – Sieg zahlt 1,97×', tag: 'Schnell', a: '#1d4a5c', b: '#08191f' },
+  { id: 'blackjack', cat: 'table', name: 'Blackjack', icon: '🃏', desc: 'Schlag den Dealer – Blackjack zahlt 3:2', tag: 'Karten', a: '#0f5132', b: '#06261a', hot: true },
+  { id: 'roulette', cat: 'table', name: 'Roulette', icon: '🎡', desc: 'Europäisch mit einer Null', tag: 'Tisch', a: '#5c1a1d', b: '#1f0809', hot: true },
+  { id: 'baccarat', cat: 'table', name: 'Baccarat', icon: '🎴', desc: 'Spieler oder Bank – wer kommt näher an 9?', tag: 'Karten', a: '#5c1a3f', b: '#1f0814' },
+  { id: 'poker', cat: 'table', name: 'Video Poker', icon: '♠️', desc: 'Jacks or Better', tag: 'Karten', a: '#1b2f5c', b: '#08101f' },
+  { id: 'threecard', cat: 'table', name: 'Drei-Karten-Poker', icon: '🂠', desc: 'Ante, Paar-Plus und Dealer-Duell', tag: 'Karten', a: '#2e1a5c', b: '#0e081f' },
+  { id: 'craps', cat: 'table', name: 'Craps', icon: '🎲', desc: 'Pass Line, Field & Co. – der Würfeltisch', tag: 'Würfel', a: '#1f5c3a', b: '#08200f' },
+  { id: 'sicbo', cat: 'table', name: 'Sic Bo', icon: '🀄', desc: 'Drei Würfel, viele Wetten', tag: 'Würfel', a: '#5c1a2e', b: '#1f0810' },
+  { id: 'dragontiger', cat: 'table', name: 'Drache & Tiger', icon: '🐉', desc: 'Eine Karte, ein Duell, schnell entschieden', tag: 'Karten', a: '#5c3a0a', b: '#1f1303' },
+  { id: 'war', cat: 'table', name: 'Kartenkrieg', icon: '⚔️', desc: 'Höhere Karte gewinnt – oder Krieg!', tag: 'Karten', a: '#5c2a1a', b: '#1f0d08' },
+  { id: 'reddog', cat: 'table', name: 'Red Dog', icon: '🐕', desc: 'Fällt die dritte Karte dazwischen?', tag: 'Karten', a: '#5c1a1a', b: '#1f0808' },
+  { id: 'slots', cat: 'lotto', name: 'Slots', icon: '🎰', desc: '5 Walzen, 10 Gewinnlinien', tag: 'Klassiker', a: '#5a3d06', b: '#1d1402', hot: true },
+  { id: 'wheel', cat: 'lotto', name: 'Glücksrad', icon: '🍀', desc: 'Dreh das Rad – Risiko frei wählbar', tag: 'Glück', a: '#5c4a0a', b: '#1f1903' },
+  { id: 'keno', cat: 'lotto', name: 'Keno', icon: '🔢', desc: 'Bis zu 10 Zahlen tippen, 10 werden gezogen', tag: 'Lotto', a: '#1d3f5c', b: '#08141f' },
+  { id: 'bingo', cat: 'lotto', name: 'Schnell-Bingo', icon: '🔵', desc: '40 Kugeln – wie viele Linien schaffst du?', tag: 'Lotto', a: '#1b4f8a', b: '#081a30' },
+  { id: 'scratch', cat: 'lotto', name: 'Rubbellos', icon: '🎟️', desc: 'Freirubbeln, 3 gleiche gewinnen', tag: 'Los', a: '#4a1d5c', b: '#16081f' },
+  { id: 'horses', cat: 'lotto', name: 'Pferderennen', icon: '🏇', desc: 'Setz auf Favorit oder Außenseiter', tag: 'Rennen', a: '#2f5a2a', b: '#0e1f0b' },
 ];
+
+// ---------- Favoriten & zuletzt gespielt (pro Gerät) ----------
+const readList = (k) => { try { return JSON.parse(localStorage.getItem(k)) || []; } catch { return []; } };
+const writeList = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* egal */ } };
+export const favorites = {
+  list: () => readList('casino.favs'),
+  has: (id) => readList('casino.favs').includes(id),
+  toggle(id) { const l = readList('casino.favs'); const i = l.indexOf(id); if (i >= 0) l.splice(i, 1); else l.unshift(id); writeList('casino.favs', l); return i < 0; },
+};
+export const recent = {
+  list: () => readList('casino.recent'),
+  add(id) { const l = readList('casino.recent').filter((x) => x !== id); l.unshift(id); writeList('casino.recent', l.slice(0, 12)); },
+};
 const state = { me: null, balance: 0, shownBalance: 0, cleanup: null, route: null };
 
 // ---------- Guthaben-Anzeige ----------
@@ -220,25 +241,41 @@ const gameCtx = {
 async function render() {
   const route = (location.hash.replace(/^#\/?/, '') || 'home').split('?')[0];
   state.route = route;
-  document.getElementById('mainnav').classList.remove('open');
+  document.body.classList.remove('side-open');
   if (state.cleanup) { try { state.cleanup(); } catch { /* egal */ } state.cleanup = null; }
-  document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === route));
+  const cat = route === 'cat' ? new URLSearchParams(location.hash.split('?')[1] || '').get('c') : null;
+  const game = GAMES.find((g) => g.id === route);
+  const navKey = cat ? `cat-${cat}` : game ? `cat-${game.cat}` : route;
+  document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === navKey));
   appEl.replaceChildren();
   window.scrollTo(0, 0);
   if (!state.me) return;
 
-  const game = GAMES.find((g) => g.id === route);
   try {
     if (game) {
+      recent.add(game.id);
+      const fav = favorites.has(game.id);
       const root = h(`<div>
-        <div class="page-head"><a class="back-link" href="#/">← Spiele</a><h1>${game.icon} ${esc(game.name)}</h1></div>
-        <div class="game-root"></div></div>`);
+        <div class="page-head"><a class="back-link" href="#/">← Lobby</a><h1>${game.icon} ${esc(game.name)}</h1>
+          <button class="fav-btn ${fav ? 'on' : ''}" title="Favorit">${fav ? '★' : '☆'}</button></div>
+        <div class="game-root"></div><div class="game-bets"></div></div>`);
       appEl.appendChild(root);
+      const favBtn = root.querySelector('.fav-btn');
+      favBtn.addEventListener('click', () => {
+        const on = favorites.toggle(game.id);
+        favBtn.classList.toggle('on', on);
+        favBtn.textContent = on ? '★' : '☆';
+        sfx.click();
+        toast(on ? `${game.name} ist jetzt ein Favorit.` : 'Aus den Favoriten entfernt.');
+      });
       const mod = await import(`./games/${game.id}.js`);
       if (state.route !== route) return; // inzwischen weiternavigiert
-      state.cleanup = (await mod.default(root.querySelector('.game-root'), gameCtx)) || null;
+      const stop = (await mod.default(root.querySelector('.game-root'), gameCtx)) || null;
+      const bets = betsPanel(gameCtx, { game: game.id, GAMES });
+      root.querySelector('.game-bets').appendChild(bets.el);
+      state.cleanup = () => { stop?.(); bets.cleanup(); };
     } else if (pages[route]) {
-      state.cleanup = (await pages[route](appEl, { ...gameCtx, GAMES, state, server, live, openProfilePicker, loadMe, logout })) || null;
+      state.cleanup = (await pages[route](appEl, { ...gameCtx, GAMES, CATS, favorites, recent, state, server, live, openProfilePicker, loadMe, logout, cat })) || null;
     } else {
       location.hash = '#/';
     }
@@ -251,7 +288,22 @@ function rerender() { render(); }
 
 // ---------- Start ----------
 document.getElementById('profileBtn').addEventListener('click', () => openProfilePicker());
-document.getElementById('menuBtn').addEventListener('click', () => document.getElementById('mainnav').classList.toggle('open'));
+const toggleSide = () => document.body.classList.toggle('side-open');
+document.getElementById('menuBtn').addEventListener('click', toggleSide);
+document.getElementById('bottomMenu').addEventListener('click', toggleSide);
+document.getElementById('sideBackdrop').addEventListener('click', () => document.body.classList.remove('side-open'));
+// Kategorien in der Seitenleiste
+document.getElementById('sideCats').innerHTML = '<div class="side-title">Spiele</div>' + CATS.map((c) =>
+  `<a href="#/cat?c=${c.id}" data-nav="cat-${c.id}"><span class="si">${c.icon}</span><span>${esc(c.name)}</span><span class="side-count">${GAMES.filter((g) => g.cat === c.id).length}</span></a>`).join('');
+// Suche: tippen → Lobby zeigt Treffer
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim();
+  const target = q ? `#/search?q=${encodeURIComponent(q)}` : '#/';
+  if (location.hash !== target) history.replaceState(null, '', target);
+  render();
+});
+searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); } });
 const soundBtn = document.getElementById('soundToggle');
 const paintSound = () => (soundBtn.textContent = sfx.enabled ? '🔊' : '🔇');
 soundBtn.addEventListener('click', () => { sfx.setEnabled(!sfx.enabled); paintSound(); });

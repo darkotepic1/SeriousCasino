@@ -289,6 +289,8 @@ app.post('/api/live/ping', handle((req) => {
   return { online: live.online(), feed: live.recent(), balance: p.balance };
 }));
 
+app.get('/api/live/bets', handle((req) => live.betsView(String(req.query.game || '').replace(/[^a-z0-9]/gi, '') || null)));
+
 // ---------- Live-Crash (gemeinsame Runde) ----------
 app.get('/api/live/crash/state', handle((req) => {
   let viewer = null;
