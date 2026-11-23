@@ -127,7 +127,8 @@ app.use('/api', (req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(origin && ALLOWED_ORIGINS.has(origin) ? 204 : 403);
   next();
 });
-app.get('/api/health', (req, res) => res.json({ ok: true }));
+// Gesundheit + grobe Kennzahlen (keine persönlichen Daten) – hilft, Abstürze/Speicherprobleme zu erkennen
+app.get('/api/health', (req, res) => res.json({ ok: true, upMin: Math.round(process.uptime() / 60), memMB: Math.round(process.memoryUsage().rss / 1048576), stateKB: Math.round(db.savedSize() / 1024) }));
 
 // Sperre gegen Passwort-Raten: nach 8 Fehlversuchen 10 Minuten Pause (pro IP)
 const failed = new Map();

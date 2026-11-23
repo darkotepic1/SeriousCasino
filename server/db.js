@@ -122,6 +122,7 @@ async function load() {
 // (Früher wurde bei JEDER Anfrage der komplette Stand verglichen – das hat den kleinen Gratis-Server ausgebremst.)
 const SAVE_DELAY = store === fileStore ? 300 : 1000;
 let lastSaved = null;
+let lastSize = 0;
 let saveTimer = null;
 function save() {
   if (!saveTimer) saveTimer = setTimeout(saveNow, SAVE_DELAY);
@@ -132,6 +133,7 @@ function saveNow() {
   const json = JSON.stringify(data);
   if (json === lastSaved) return;
   lastSaved = json;
+  lastSize = json.length;
   if (store === fileStore) fileStore.writeSync(json);
   else scheduleDbWrite(json);
 }
@@ -146,4 +148,4 @@ function get() {
   return data;
 }
 
-module.exports = { load, save, flush, get, FILE, storeName: () => store.name, _makePgStore: makePgStore };
+module.exports = { savedSize: () => lastSize, load, save, flush, get, FILE, storeName: () => store.name, _makePgStore: makePgStore };
